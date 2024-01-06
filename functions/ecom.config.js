@@ -7,8 +7,8 @@
 
 const app = {
   app_id: 115933,
-  title: 'My Awesome E-Com Plus App',
-  slug: 'my-awesome-app',
+  title: 'Frete Click',
+  slug: 'frete-click',
   type: 'external',
   state: 'active',
   authentication: true,
@@ -22,7 +22,7 @@ const app = {
      * Triggered to calculate shipping options, must return values and deadlines.
      * Start editing `routes/ecom/modules/calculate-shipping.js`
      */
-    // calculate_shipping:   { enabled: true },
+    calculate_shipping:   { enabled: true },
 
     /**
      * Triggered to validate and apply discount value, must return discount and conditions.
@@ -82,9 +82,9 @@ const app = {
       // 'DELETE',        // Delete customers
     ],
     orders: [
-      // 'GET',           // List/read orders with public and private fields
+      'GET',           // List/read orders with public and private fields
       // 'POST',          // Create orders
-      // 'PATCH',         // Edit orders
+      'PATCH',         // Edit orders
       // 'PUT',           // Overwrite orders
       // 'DELETE',        // Delete orders
     ],
@@ -101,7 +101,7 @@ const app = {
      */
     'orders/fulfillments': [
       // 'GET',           // List/read order fulfillment and tracking events
-      // 'POST',          // Create fulfillment event with new status
+      'POST',          // Create fulfillment event with new status
       // 'DELETE',        // Delete fulfillment event
     ],
     'orders/payments_history': [
@@ -140,35 +140,273 @@ const app = {
   admin_settings: {
     /**
      * JSON schema based fields to be configured by merchant and saved to app `data` / `hidden_data`, such as:
-
-     webhook_uri: {
-       schema: {
-         type: 'string',
-         maxLength: 255,
-         format: 'uri',
-         title: 'Notifications URI',
-         description: 'Unique notifications URI available on your Custom App dashboard'
-       },
-       hide: true
-     },
-     token: {
-       schema: {
-         type: 'string',
-         maxLength: 50,
-         title: 'App token'
-       },
-       hide: true
-     },
-     opt_in: {
-       schema: {
-         type: 'boolean',
-         default: false,
-         title: 'Some config option'
-       },
-       hide: false
-     },
-
-     */
+*/
+      zip: {
+        schema: {
+          type: 'string',
+          maxLength: 9,
+          pattern: '^[0-9]{5}-?[0-9]{3}$',
+          title: 'CEP de origem'
+        },
+        hide: true
+      },
+     api_key: {
+      schema: {
+        type: 'string',
+        maxLength: 600,
+        title: 'Api Key',
+        description: 'Solicite Api Key para Frete Click'
+      },
+      hide: true
+    },
+    from: {
+      schema: {
+        type: 'object',
+        title: 'Endereço do remetente',
+        description: 'Configure endereço de remetente para cálculo.',
+        properties: {
+          city: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Cidade de Origem'
+          },
+          province_code: {
+            type: 'string',
+            title: 'Sigla do Estado de Origem',
+            enum: [
+              'AC',
+              'AL',
+              'AP',
+              'AM',
+              'BA',
+              'CE',
+              'DF',
+              'ES',
+              'GO',
+              'MA',
+              'MT',
+              'MS',
+              'MG',
+              'PA',
+              'PB',
+              'PR',
+              'PE',
+              'PI',
+              'RR',
+              'RO',
+              'RJ',
+              'RS',
+              'RN',
+              'SC',
+              'SP',
+              'SE',
+              'TO'
+            ]
+          },
+          country: {
+            type: 'string',
+            maxLength: 100,
+            title: 'País de Origem'
+          },
+        }
+      },
+      hide: true
+    },
+    posting_deadline: {
+      schema: {
+        title: 'Prazo de postagem',
+        type: 'object',
+        required: ['days'],
+        additionalProperties: false,
+        properties: {
+          days: {
+            type: 'integer',
+            minimum: 0,
+            maximum: 999999,
+            title: 'Número de dias',
+            description: 'Dias de prazo para postar os produtos após a compra'
+          },
+          working_days: {
+            type: 'boolean',
+            default: true,
+            title: 'Dias úteis'
+          },
+          after_approval: {
+            type: 'boolean',
+            default: true,
+            title: 'Após aprovação do pagamento'
+          }
+        }
+      },
+      hide: false
+    },
+    additional_price: {
+      schema: {
+        type: 'number',
+        minimum: -999999,
+        maximum: 999999,
+        title: 'Custo adicional',
+        description: 'Valor a adicionar (negativo para descontar) no frete calculado em todas regras'
+      },
+      hide: false
+    },
+    services: {
+      schema: {
+        title: 'Rótulo dos Serviços',
+        description: 'Para alterar o nome de exibição de algum serviço basta infomar o código do serviço e um novo rótulo de exibição.',
+        type: 'array',
+        maxItems: 6,
+        items: {
+          title: 'Serviço de entrega',
+          type: 'object',
+          required: [
+            'service_name',
+            'label'
+          ],
+          properties: {
+            service_name: {
+              type: 'string',
+              title: 'Serviço',
+              description: 'Nome oficial do serviço na transportadora'
+            },
+            label: {
+              type: 'string',
+              maxLength: 50,
+              title: 'Rótulo',
+              description: 'Nome do serviço exibido aos clientes'
+            }
+          }
+        }
+      },
+      hide: true
+    },
+    free_shipping_rules: {
+      schema: {
+        title: 'Regras de frete grátis',
+        type: 'array',
+        maxItems: 300,
+        items: {
+          title: 'Regra de frete grátis',
+          type: 'object',
+          minProperties: 1,
+          properties: {
+            zip_range: {
+              title: 'Faixa de CEP',
+              type: 'object',
+              required: [
+                'min',
+                'max'
+              ],
+              properties: {
+                min: {
+                  type: 'integer',
+                  minimum: 10000,
+                  maximum: 999999999,
+                  title: 'CEP inicial'
+                },
+                max: {
+                  type: 'integer',
+                  minimum: 10000,
+                  maximum: 999999999,
+                  title: 'CEP final'
+                }
+              }
+            },
+            min_amount: {
+              type: 'number',
+              minimum: 1,
+              maximum: 999999999,
+              title: 'Valor mínimo da compra'
+            },
+            product_ids: {
+              title: 'Lista de produtos',
+              description: 'Se preenchido, o desconto só será válido se um dos produtos estiver no carrinho',
+              type: 'array',
+              items: {
+                type: 'string',
+                pattern: '^[a-f0-9]{24}$',
+                title: 'ID do produto'
+              }
+            },
+            all_product_ids: {
+              type: 'boolean',
+              title: 'Checar todos os produtos',
+              description: 'Se ativo, a regra será disponibilizada apenas se todos os itens do carrinho estiverem na lista de produtos selecionados',
+            }
+          }
+        }
+      },
+      hide: false
+    },
+    shipping_rules: {
+      schema: {
+        title: 'Regras de envio',
+        description: 'Aplicar descontos/adicionais condiciAtivar regiões',
+        type: 'array',
+        maxItems: 300,
+        items: {
+          title: 'Regra de envio',
+          type: 'object',
+          minProperties: 1,
+          properties: {
+            service_name: {
+              type: 'string',
+              title: 'Nome do serviço'
+            },
+            zip_range: {
+              title: 'Faixa de CEP',
+              type: 'object',
+              required: [
+                'min',
+                'max'
+              ],
+              properties: {
+                min: {
+                  type: 'integer',
+                  minimum: 10000,
+                  maximum: 999999999,
+                  title: 'CEP inicial'
+                },
+                max: {
+                  type: 'integer',
+                  minimum: 10000,
+                  maximum: 999999999,
+                  title: 'CEP final'
+                }
+              }
+            },
+            min_amount: {
+              type: 'number',
+              minimum: 1,
+              maximum: 999999999,
+              title: 'Valor mínimo da compra'
+            },
+            discount: {
+              title: 'Desconto',
+              type: 'object',
+              required: [
+                'value'
+              ],
+              properties: {
+                percentage: {
+                  type: 'boolean',
+                  default: false,
+                  title: 'Desconto percentual'
+                },
+                value: {
+                  type: 'number',
+                  minimum: -99999999,
+                  maximum: 99999999,
+                  title: 'Valor do desconto',
+                  description: 'Valor percentual/fixo do desconto ou acréscimo (negativo)'
+                }
+              }
+            }
+          }
+        }
+      },
+      hide: false
+    },
   }
 }
 
