@@ -159,6 +159,15 @@ const app = {
       },
       hide: true
     },
+    best_quotation: {
+      schema: {
+        type: 'boolean',
+        default: true,
+        title: 'Retonar melhor cotação',
+        hint: 'Retornar a cotação de melhor custo e prazo apenas, com o intuito de não confundir clientes',
+      },
+      hide: true
+    },
     from: {
       schema: {
         type: 'object',
