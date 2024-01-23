@@ -161,17 +161,17 @@ exports.post = async ({ appSdk }, req, res) => {
       cartSubtotal += (quantity * ecomUtils.price(item))
 
       // parse cart items to kangu schema
-      let gWeight = 0
+      let kgWeight = 0
       if (weight && weight.value) {
         switch (weight.unit) {
-          case 'kg':
-            gWeight = weight.value * 1000
+          case 'g':
+            kgWeight = weight.value / 1000
             break
           case 'mg':
-            gWeight = weight.value / 1000
+            kgWeight = weight.value / 1000000
             break
           default:
-            gWeight = weight.value
+            kgWeight = weight.value
         }
       }
       const mDimensions = {}
@@ -193,13 +193,14 @@ exports.post = async ({ appSdk }, req, res) => {
         }
       }
       packages.push({
-        weight: gWeight || 5,
+        weight: kgWeight || 5,
         height: mDimensions.height || 5,
         width: mDimensions.width || 10,
         depth: mDimensions.length || 10,
         qtd: quantity
       })
     })
+    const productType = 'ecommerce'
 
     const productTotalPrice = cartSubtotal || 1
     const quoteType = 'full'
@@ -207,6 +208,7 @@ exports.post = async ({ appSdk }, req, res) => {
     const body = {
       destination,
       origin,
+      productType,
       productTotalPrice,
       quoteType,
       marketplace,
