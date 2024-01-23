@@ -312,7 +312,7 @@ exports.post = async ({ appSdk }, req, res) => {
             }
 
             // search for discount by shipping rule
-            const shippingName = freteClickService.alias || freteClickService.name
+            const shippingName = carrier.alias || carrier.name
             if (Array.isArray(shippingRules)) {
               for (let i = 0; i < shippingRules.length; i++) {
                 const rule = shippingRules[i]
