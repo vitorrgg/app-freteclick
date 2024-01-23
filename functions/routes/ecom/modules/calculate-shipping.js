@@ -1,7 +1,7 @@
 const axios = require('axios')
 const ecomUtils = require('@ecomplus/utils')
 
-exports.post = ({ appSdk }, req, res) => {
+exports.post = async ({ appSdk }, req, res) => {
   /**
    * Treat `params` and (optionally) `application` from request body to properly mount the `response`.
    * JSON Schema reference for Calculate Shipping module objects:
@@ -30,16 +30,18 @@ exports.post = ({ appSdk }, req, res) => {
     shippingRules = []
   }
 
-  const token = appData.kangu_token
-  if (!token) {
+  const apikey = appData.api_key
+  if (!apikey) {
     // must have configured kangu doc number and token
     return res.status(409).send({
       error: 'CALCULATE_AUTH_ERR',
-      message: 'Token or document unset on app hidden data (merchant must configure the app)'
+      message: 'Api key or document unset on app hidden data (merchant must configure the app)'
     })
   }
 
-  const ordernar = appData.ordernar ? appData.ordernar : 'preco'
+  const marketplace = appData.best_quotation
+
+  const order = 'total'
 
   if (appData.free_shipping_from_value >= 0) {
     response.free_shipping_from_value = appData.free_shipping_from_value
@@ -69,31 +71,37 @@ exports.post = ({ appSdk }, req, res) => {
     return true
   }
 
-  const completeAddress = address => {
-    const { logradouro, numero, complemento, bairro, cidade, distancia } = address
-    let lineAddress
-    if (logradouro) {
-      lineAddress = logradouro
-      if (numero) {
-        lineAddress += ', ' + numero
-      }
-      if (complemento) {
-        lineAddress += ' - ' + complemento
-      }
-      if (bairro) {
-        lineAddress += ', ' + bairro
-      }
-      if (cidade) {
-        lineAddress += ', ' + cidade
-      }
-      if (logradouro) {
-        lineAddress += ' - ' + distancia + 'm'
-      }
-    } else {
-      lineAddress = ''
+  const getAddress = async (zip) => {
+    const destination = {
+      "city": "Manaus",
+      "state": "AM",
+      "country":  "Brasil"
     }
-    return lineAddress
+
+    const options = {
+      method: 'GET', 
+      url: `https://viacep.com.br/ws/${zip}/json/`,
+      timeout: 5000
+    };
+    try {
+      const { data } = await axios.request(options);
+      if (data && data.uf && data.localidade) {
+        destination.city = data.localidade
+        destination.state = data.uf.toUpperCase()
+      }
+    } catch (error) {
+      console.error(error);
+    }
+    return destination
   }
+  const destination = await getAddress(destinationZip)
+  const originObj = {}
+  if (appData.from && appData.from.city && appData.from.province_code) {
+    originObj.city = appData.from.city
+    originObj.state = appData.from.province_code
+    originObj.country = appData.from.country || 'Brasil'
+  }
+  const origin = Object.keys(originObj).length ? originObj : await getAddress(originZip)
 
   // search for configured free shipping rule
   if (Array.isArray(appData.free_shipping_rules)) {
@@ -153,53 +161,57 @@ exports.post = ({ appSdk }, req, res) => {
       cartSubtotal += (quantity * ecomUtils.price(item))
 
       // parse cart items to kangu schema
-      let kgWeight = 0
+      let gWeight = 0
       if (weight && weight.value) {
         switch (weight.unit) {
-          case 'g':
-            kgWeight = weight.value / 1000
+          case 'kg':
+            gWeight = weight.value * 1000
             break
           case 'mg':
-            kgWeight = weight.value / 1000000
+            gWeight = weight.value / 1000
             break
           default:
-            kgWeight = weight.value
+            gWeight = weight.value
         }
       }
-      const cmDimensions = {}
+      const mDimensions = {}
       if (dimensions) {
         for (const side in dimensions) {
           const dimension = dimensions[side]
           if (dimension && dimension.value) {
             switch (dimension.unit) {
-              case 'm':
-                cmDimensions[side] = dimension.value * 100
+              case 'cm':
+                mDimensions[side] = dimension.value / 100
                 break
               case 'mm':
-                cmDimensions[side] = dimension.value / 10
+                mDimensions[side] = dimension.value / 1000
                 break
               default:
-                cmDimensions[side] = dimension.value
+                mDimensions[side] = dimension.value
             }
           }
         }
       }
       packages.push({
-        peso: kgWeight || 0.5,
-        altura: cmDimensions.height || 5,
-        largura: cmDimensions.width || 10,
-        comprimento: cmDimensions.length || 10,
-        valor: ecomUtils.price(item),
-        quantidade: quantity
+        weight: gWeight || 5,
+        height: mDimensions.height || 5,
+        width: mDimensions.width || 10,
+        depth: mDimensions.length || 10,
+        qtd: quantity
       })
     })
 
+    const productTotalPrice = cartSubtotal || 1
+    const quoteType = 'full'
+
     const body = {
-      cepOrigem: originZip,
-      cepDestino: destinationZip,
-      origem: 'E-Com Plus',
-      ordernar,
-      packages
+      destination,
+      origin,
+      productTotalPrice,
+      quoteType,
+      marketplace,
+      packages,
+      app: 'E-Com Plus'
     }
     // send POST request to kangu REST API
     return axios.post(
@@ -207,7 +219,7 @@ exports.post = ({ appSdk }, req, res) => {
       body,
       {
         headers: {
-          token,
+          'api-token': apikey,
           accept: 'application/json',
           'Content-Type': 'application/json'
         },
@@ -226,7 +238,7 @@ exports.post = ({ appSdk }, req, res) => {
             })
           }
         } else {
-          result = data
+          result = data && data.response && data.response.data && data.response.data.order && data.response.data.order.quotes
         }
 
         if (result && Number(status) === 200 && Array.isArray(result)) {
@@ -234,12 +246,10 @@ exports.post = ({ appSdk }, req, res) => {
           console.log('Quote with success', storeId)
           let lowestPriceShipping
           result.forEach(freteClickService => {
+            const { carrier } = freteClickService
             // parse to E-Com Plus shipping line object
-            const serviceCode = String(freteClickService.servico)
-            const price = freteClickService.vlrFrete
-            const kanguPickup = Array.isArray(freteClickService.pontosRetira)
-              ? freteClickService.pontosRetira[0]
-              : false
+            const serviceCode = carrier && carrier.id
+            const price = freteClickService.total
 
             // push shipping service object to response
             const shippingLine = {
@@ -253,12 +263,9 @@ exports.post = ({ appSdk }, req, res) => {
               total_price: price,
               discount: 0,
               delivery_time: {
-                days: parseInt(freteClickService.prazoEnt, 10),
+                days: parseInt(freteClickService.deliveryDeadline, 10),
                 working_days: true
               },
-              delivery_instructions: kanguPickup
-                ? `${kanguPickup.nome} - ${completeAddress(kanguPickup.endereco)}`
-                : undefined,
               posting_deadline: {
                 days: 3,
                 ...appData.posting_deadline
@@ -266,25 +273,23 @@ exports.post = ({ appSdk }, req, res) => {
               package: {
                 weight: {
                   value: finalWeight,
-                  unit: 'kg'
+                  unit: 'g'
                 }
               },
               custom_fields: [
                 {
-                  field: 'kangu_reference',
-                  value: kanguPickup
-                    ? String(kanguPickup.referencia)
-                    : String(freteClickService.referencia)
-                },
-                {
-                  field: 'nfe_required',
-                  value: freteClickService.nf_obrig === 'N' ? 'false' : 'true'
+                  field: 'freteclick_id',
+                  value: freteClickService.id
                 }
               ],
-              flags: ['kangu-ws', `kangu-${serviceCode}`.substr(0, 20)]
+              flags: ['freteclick-ws', `freteclick-${serviceCode}`.substr(0, 20)]
             }
             if (!lowestPriceShipping || lowestPriceShipping.price > price) {
               lowestPriceShipping = shippingLine
+            }
+
+            if (shippingLine.posting_deadline && shippingLine.posting_deadline.days >= 0) {
+              shippingLine.posting_deadline.days += parseInt(freteClickService.retrieveDeadline, 10)
             }
 
             // check for default configured additional/discount price
@@ -304,7 +309,7 @@ exports.post = ({ appSdk }, req, res) => {
             }
 
             // search for discount by shipping rule
-            const shippingName = freteClickService.transp_nome || freteClickService.descricao
+            const shippingName = freteClickService.alias || freteClickService.name
             if (Array.isArray(shippingRules)) {
               for (let i = 0; i < shippingRules.length; i++) {
                 const rule = shippingRules[i]
@@ -346,12 +351,9 @@ exports.post = ({ appSdk }, req, res) => {
 
             response.shipping_services.push({
               label,
-              carrier: freteClickService.transp_nome,
-              carrier_doc_number: typeof freteClickService.cnpjTransp === 'string'
-                ? freteClickService.cnpjTransp.replace(/\D/g, '').substr(0, 19)
-                : undefined,
-              service_name: serviceCode || freteClickService.descricao,
-              service_code: serviceCodeName.substring(0, 70),
+              carrier: freteClickService.name,
+              service_name: serviceCodeName || shippingName,
+              service_code: serviceCode,
               shipping_line: shippingLine
             })
           })
