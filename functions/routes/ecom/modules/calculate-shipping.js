@@ -246,7 +246,6 @@ exports.post = async ({ appSdk }, req, res) => {
         if (result && Number(status) === 200 && Array.isArray(result)) {
           // success response
           console.log('Quote with success', storeId)
-          console.log('Quote with success:', JSON.stringify(result))
           let lowestPriceShipping
           result.forEach(freteClickService => {
             const { carrier } = freteClickService
