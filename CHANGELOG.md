@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## 1.0.0 (2024-01-23)
+
+
+### Features
+
+* **calculate-shipping:** finish calculate shipping ([fb21e85](https://github.com/ecomplus/application-starter/commit/fb21e855cdffb2655d819c6d28cbe1a982eeeb9b))
+* **description:** set description app ([9ca9a55](https://github.com/ecomplus/application-starter/commit/9ca9a559c59049ccd747a6bccbacfe3f0a867d8d))
+* **ecom-config:** option to best quotation ([3b46216](https://github.com/ecomplus/application-starter/commit/3b4621694fbe53aa711b40477a3acc1835ae5c29))
+* **ecom-config:** set config options ([a76679d](https://github.com/ecomplus/application-starter/commit/a76679d6d1c733f5b1532c50fc9dd07c9c29c5c8))
+
 ## [1.0.0-starter.26](https://github.com/ecomplus/application-starter/compare/v1.0.0-starter.25...v1.0.0-starter.26) (2022-02-24)
 
 ## [1.0.0-starter.25](https://github.com/ecomplus/application-starter/compare/v1.0.0-starter.24...v1.0.0-starter.25) (2022-02-24)
