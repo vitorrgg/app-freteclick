@@ -174,29 +174,29 @@ exports.post = async ({ appSdk }, req, res) => {
             kgWeight = weight.value
         }
       }
-      const mDimensions = {}
+      const cmDimensions = {}
       if (dimensions) {
         for (const side in dimensions) {
           const dimension = dimensions[side]
           if (dimension && dimension.value) {
             switch (dimension.unit) {
-              case 'cm':
-                mDimensions[side] = dimension.value / 100
+              case 'm':
+                cmDimensions[side] = dimension.value * 100
                 break
               case 'mm':
-                mDimensions[side] = dimension.value / 1000
+                cmDimensions[side] = dimension.value / 10
                 break
               default:
-                mDimensions[side] = dimension.value
+                cmDimensions[side] = dimension.value
             }
           }
         }
       }
       packages.push({
         weight: kgWeight || 5,
-        height: mDimensions.height || 5,
-        width: mDimensions.width || 10,
-        depth: mDimensions.length || 10,
+        height: cmDimensions.height || 5,
+        width: cmDimensions.width || 10,
+        depth: cmDimensions.length || 10,
         qtd: quantity
       })
     })
