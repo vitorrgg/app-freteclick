@@ -1,5 +1,6 @@
 // read configured E-Com Plus app data
 const getAppData = require('./../../lib/store-api/get-app-data')
+const createTag = require('../../lib/freteclick/create-tag')
 
 const SKIP_TRIGGER_NAME = 'SkipTrigger'
 const ECHO_SUCCESS = 'SUCCESS'
@@ -17,7 +18,10 @@ exports.post = ({ appSdk }, req, res) => {
   const trigger = req.body
 
   // get app configured options
-  getAppData({ appSdk, storeId })
+  let auth
+  appSdk.getAuth(storeId).then(_auth => {
+    auth = _auth
+    return getAppData({ appSdk, storeId, auth })
 
     .then(appData => {
       if (
@@ -31,10 +35,100 @@ exports.post = ({ appSdk }, req, res) => {
       }
 
       /* DO YOUR CUSTOM STUFF HERE */
+      const { api_key, send_tag_status } = appData
+      if (appData.enable_auto_tag && api_key && trigger.resource === 'orders') {
+        // handle order financial status changes
+        const order = trigger.body
+        if (
+          order &&
+          order.financial_status &&
+          (order.financial_status.current === 'paid')
+        ) {
+          // read full order body
+          const resourceId = trigger.resource_id
+          console.log('Trigger disparado para enviar tag com id:', resourceId)
+          return appSdk.apiRequest(storeId, `/orders/${resourceId}.json`, 'GET', null, auth)
+            .then(({ response }) => {
+              const order = response.data
+              if (order && order.shipping_lines[0] && order.shipping_lines[0].flags && order.shipping_lines[0].flags.length && order.shipping_lines[0].flags.indexOf('freteclick-ws') === -1) {
+                return res.send(ECHO_SKIP)
+              }
+              console.log(`Shipping tag for #${storeId} ${order._id}`)
+              return createTag(order, api_key, storeId, appData, appSdk)
+                .then(data => {
+                  console.log(`>> Etiqueta Criada Com Sucesso #${storeId} ${resourceId}`)
+                  // updates metafields with the generated tag id
+                  return appSdk.apiRequest(
+                    storeId,
+                    `/orders/${resourceId}/metafields.json`,
+                    'POST',
+                    {
+                      namespace: 'app-freteclick',
+                      field: 'rastreio',
+                      value: data.codigo
+                    },
+                    auth
+                  )
+                  .then(() => data)
+                  .catch(err => {
+                    console.log('Erro hidden data')
+                    if (err.response) {
+                      console.log(err.response)
+                      const { status, data } = err.response
+                      if (status !== 401 && status !== 403) {
+                        if (typeof data === 'object' && data) {
+                          console.log(JSON.stringify(data))
+                        } else {
+                          console.log(data)
+                        }
+                      }
+                    } else {
+                      console.error(err)
+                    }
+                  })
+                })
 
+                .then(data => {
+                  console.log('Inserir rastreio', data)
+                  const tag = data
+                  if (tag.etiquetas.length) {
+                    const shippingLine = order.shipping_lines[0]
+                    if (shippingLine) {
+                      const trackingCodes = shippingLine.tracking_codes || []
+                      trackingCodes.push({
+                        code: tag.etiquetas[0].numeroTransp,
+                        link: `https://www.melhorrastreio.com.br/rastreio/${tag.etiquetas[0].numeroTransp}`
+                      })
+                      return appSdk.apiRequest(
+                        storeId,
+                        `/orders/${resourceId}/shipping_lines/${shippingLine._id}.json`,
+                        'PATCH',
+                        { tracking_codes: trackingCodes },
+                        auth
+                      )
+                    }
+                  }
+                  return null
+                })
+
+                .then(() => {
+                  console.log(`>> 'hidden_metafields' do pedido ${order._id} atualizado com sucesso!`)
+                  // done
+                  res.send(ECHO_SUCCESS)
+                })
+                .catch(err => {
+                  console.log('deu error após gerar', err.message)
+                })
+            })
+        }
+      }
+    })
+    .then(() => {
       // all done
       res.send(ECHO_SUCCESS)
     })
+  })
+
 
     .catch(err => {
       if (err.name === SKIP_TRIGGER_NAME) {

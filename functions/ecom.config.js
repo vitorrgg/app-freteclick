@@ -168,6 +168,14 @@ const app = {
       },
       hide: true
     },
+    send_tag_status: {
+      schema: {
+        type: 'boolean',
+        default: true,
+        title: 'Enviar pedido pra frete click'
+      },
+      hide: true
+    },
     from: {
       schema: {
         type: 'object',
