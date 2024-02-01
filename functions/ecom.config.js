@@ -438,6 +438,10 @@ procedures.push({
     // Receive notifications when new order is created:
     {
       resource: 'orders',
+      field: 'financial_status',
+    },
+    {
+      resource: 'orders',
       field: 'fulfillment_status',
     }
 
