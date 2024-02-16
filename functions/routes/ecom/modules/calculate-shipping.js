@@ -1,5 +1,6 @@
 const axios = require('axios')
 const ecomUtils = require('@ecomplus/utils')
+const freteClickApi = require('../../../lib/freteclick/client')
 
 exports.post = async ({ appSdk }, req, res) => {
   /**
@@ -30,8 +31,8 @@ exports.post = async ({ appSdk }, req, res) => {
     shippingRules = []
   }
 
-  const apikey = appData.api_key
-  if (!apikey) {
+  const token = appData.api_key
+  if (!token) {
     // must have configured kangu doc number and token
     return res.status(409).send({
       error: 'CALCULATE_AUTH_ERR',
@@ -142,7 +143,7 @@ exports.post = async ({ appSdk }, req, res) => {
     let cartSubtotal = 0
     const packages = []
     params.items.forEach((item) => {
-      const { name, quantity, dimensions, weight } = item
+      const { quantity, dimensions, weight } = item
       let physicalWeight = 0
       // sum physical weight
       if (weight && weight.value) {
@@ -215,19 +216,14 @@ exports.post = async ({ appSdk }, req, res) => {
       packages,
       app: 'E-Com Plus'
     }
-    // send POST request to kangu REST API
-    return axios.post(
-      'https://api.freteclick.com.br/quotes',
-      body,
-      {
-        headers: {
-          'api-token': apikey,
-          accept: 'application/json',
-          'Content-Type': 'application/json'
-        },
-        timeout: 10000
-      }
-    ).then(({ data, status }) => {
+    // send POST request to kangu REST 
+    
+    return freteClickApi({
+      url: '/quotes',
+      method: 'post',
+      token,
+      data: body
+    }).then(({ data, status }) => {
         let result
         if (typeof data === 'string') {
           try {
