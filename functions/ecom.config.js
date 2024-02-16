@@ -182,6 +182,26 @@ const app = {
         title: 'Endereço do remetente',
         description: 'Configure endereço de remetente para cálculo.',
         properties: {
+          street: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Rua'
+          },
+          borough: {
+            type: 'string',
+            maxLength: 100,
+            title: 'Bairro'
+          },
+          number: {
+            type: 'number',
+            maxLength: 100,
+            title: 'Número'
+          },
+          complement: {
+            type: 'number',
+            maxLength: 100,
+            title: 'Complemento'
+          },
           city: {
             type: 'string',
             maxLength: 100,
@@ -225,6 +245,7 @@ const app = {
             maxLength: 100,
             title: 'País de Origem'
           },
+
         }
       },
       hide: true
