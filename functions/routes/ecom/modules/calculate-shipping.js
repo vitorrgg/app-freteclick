@@ -242,6 +242,7 @@ exports.post = async ({ appSdk }, req, res) => {
         if (result && Number(status) === 200 && Array.isArray(result)) {
           // success response
           console.log('Quote with success', storeId)
+          const orderId = data.response.data.order.id
           let lowestPriceShipping
           result.forEach(freteClickService => {
             const { carrier } = freteClickService
@@ -278,6 +279,10 @@ exports.post = async ({ appSdk }, req, res) => {
                 {
                   field: 'freteclick_id',
                   value: freteClickService.id
+                },
+                {
+                  field: 'freteclick_order_id',
+                  value: orderId
                 }
               ],
               flags: ['freteclick-ws', `freteclick-${serviceCode}`.substr(0, 20)]
