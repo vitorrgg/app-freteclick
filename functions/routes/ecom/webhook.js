@@ -36,7 +36,7 @@ exports.post = ({ appSdk }, req, res) => {
 
       /* DO YOUR CUSTOM STUFF HERE */
       const { api_key, send_tag_status } = appData
-      if (appData.enable_auto_tag && api_key && trigger.resource === 'orders') {
+      if (send_tag_status && api_key && trigger.resource === 'orders') {
         // handle order financial status changes
         const order = trigger.body
         if (
@@ -56,7 +56,7 @@ exports.post = ({ appSdk }, req, res) => {
               console.log(`Shipping tag for #${storeId} ${order._id}`)
               return createTag(order, api_key, storeId, appData, appSdk)
                 .then(data => {
-                  console.log(`>> Etiqueta Criada Com Sucesso #${storeId} ${resourceId}`)
+                  console.log(`>> Etiqueta Criada Com Sucesso #${storeId} ${resourceId}`, data)
                   // updates metafields with the generated tag id
                   return appSdk.apiRequest(
                     storeId,
@@ -65,7 +65,7 @@ exports.post = ({ appSdk }, req, res) => {
                     {
                       namespace: 'app-freteclick',
                       field: 'rastreio',
-                      value: data.codigo
+                      value: data.id
                     },
                     auth
                   )
@@ -86,38 +86,6 @@ exports.post = ({ appSdk }, req, res) => {
                       console.error(err)
                     }
                   })
-                })
-
-                .then(data => {
-                  console.log('Inserir rastreio', data)
-                  const tag = data
-                  if (tag.etiquetas.length) {
-                    const shippingLine = order.shipping_lines[0]
-                    if (shippingLine) {
-                      const trackingCodes = shippingLine.tracking_codes || []
-                      trackingCodes.push({
-                        code: tag.etiquetas[0].numeroTransp,
-                        link: `https://www.melhorrastreio.com.br/rastreio/${tag.etiquetas[0].numeroTransp}`
-                      })
-                      return appSdk.apiRequest(
-                        storeId,
-                        `/orders/${resourceId}/shipping_lines/${shippingLine._id}.json`,
-                        'PATCH',
-                        { tracking_codes: trackingCodes },
-                        auth
-                      )
-                    }
-                  }
-                  return null
-                })
-
-                .then(() => {
-                  console.log(`>> 'hidden_metafields' do pedido ${order._id} atualizado com sucesso!`)
-                  // done
-                  res.send(ECHO_SUCCESS)
-                })
-                .catch(err => {
-                  console.log('deu error após gerar', err.message)
                 })
             })
         }
