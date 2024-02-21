@@ -217,7 +217,7 @@ exports.post = async ({ appSdk }, req, res) => {
       app: 'E-Com Plus'
     }
     // send POST request to kangu REST 
-    
+    console.log('Before quote', JSON.stringify(body))
     return freteClickApi({
       url: '/quotes',
       method: 'post',
