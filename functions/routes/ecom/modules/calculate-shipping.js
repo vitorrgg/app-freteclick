@@ -144,22 +144,6 @@ exports.post = async ({ appSdk }, req, res) => {
     const packages = []
     params.items.forEach((item) => {
       const { quantity, dimensions, weight } = item
-      let physicalWeight = 0
-      // sum physical weight
-      if (weight && weight.value) {
-        switch (weight.unit) {
-          case 'kg':
-            physicalWeight = weight.value
-            break
-          case 'g':
-            physicalWeight = weight.value / 1000
-            break
-          case 'mg':
-            physicalWeight = weight.value / 1000000
-        }
-      }
-      finalWeight += (quantity * physicalWeight)
-      cartSubtotal += (quantity * ecomUtils.price(item))
 
       // parse cart items to kangu schema
       let kgWeight = 0
@@ -175,17 +159,21 @@ exports.post = async ({ appSdk }, req, res) => {
             kgWeight = weight.value
         }
       }
+
+      finalWeight += (quantity * kgWeight)
+      cartSubtotal += (quantity * ecomUtils.price(item))
+      
       const cmDimensions = {}
       if (dimensions) {
         for (const side in dimensions) {
           const dimension = dimensions[side]
           if (dimension && dimension.value) {
             switch (dimension.unit) {
-              case 'm':
-                cmDimensions[side] = dimension.value * 100
+              case 'cm':
+                cmDimensions[side] = dimension.value / 100
                 break
               case 'mm':
-                cmDimensions[side] = dimension.value / 10
+                cmDimensions[side] = dimension.value / 1000
                 break
               default:
                 cmDimensions[side] = dimension.value
@@ -195,9 +183,9 @@ exports.post = async ({ appSdk }, req, res) => {
       }
       packages.push({
         weight: kgWeight || 5,
-        height: cmDimensions.height || 5,
-        width: cmDimensions.width || 10,
-        depth: cmDimensions.length || 10,
+        height: cmDimensions.height || 0.5,
+        width: cmDimensions.width || 0.30,
+        depth: cmDimensions.length || 0.30,
         qtd: quantity
       })
     })
