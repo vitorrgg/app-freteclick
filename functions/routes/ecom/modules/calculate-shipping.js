@@ -24,6 +24,60 @@ exports.post = async ({ appSdk }, req, res) => {
   // merge all app options configured by merchant
   const appData = Object.assign({}, application.data, application.hidden_data)
 
+  const categories = [
+    "Móveis",
+    "Alimentício não perecível",
+    "Alimentício perecível",
+    "Animais",
+    "Armamento e munições",
+    "Armário de Aço",
+    "Artigo decoração",
+    "Automotivo",
+    "Automotivo (peças usadas)",
+    "Banheiras",
+    "Baterias em geral",
+    "Bebidas",
+    "Brinquedos",
+    "Carga Refrigerada",
+    "Cigarro",
+    "Construção em geral",
+    "Construção - Piso de borracha",
+    "Construção - Pisos, Azulejos e Revestimentos",
+    "Dinheiro (moeda e papel)",
+    "Eletrodomésticos",
+    "Eletrônicos",
+    "Eletro-portátil",
+    "Energia Solar",
+    "Equipamentos",
+    "Equipamentos esportivos",
+    "Ferramentas",
+    "Fios e Cabos",
+    "Jóias e semi-jóias",
+    "Livros",
+    "Máquinas",
+    "Metais preciosos",
+    "Motores novos",
+    "Motores usados",
+    "Móveis usados",
+    "Mudança (móveis e documentos)",
+    "Objeto de Arte",
+    "Papelaria",
+    "Plantas",
+    "Pneus",
+    "Produto químico não-perigoso",
+    "Produto químico perigoso",
+    "Quadro",
+    "Roupas e calçados",
+    "Siderurgia",
+    "Tecido",
+    "Tinta base água",
+    "Tinta base solvente",
+    "Utensílio plástico",
+    "Vidro"
+  ];
+
+
+
   let shippingRules
   if (Array.isArray(appData.shipping_rules) && appData.shipping_rules.length) {
     shippingRules = appData.shipping_rules
@@ -143,14 +197,14 @@ exports.post = async ({ appSdk }, req, res) => {
   }
 
   console.log('Before quote', storeId)
-
+  const isVidro = params.items.some(({name}) => name.includes('crista') || name.includes('espelh') || name.includes('vidr'))
+  let restrict = isVidro ? 'Vidro' : 'Móveis'
   if (params.items) {
     let finalWeight = 0
     let cartSubtotal = 0
     const packages = []
     params.items.forEach((item) => {
       const { quantity, dimensions, weight } = item
-
       // parse cart items to kangu schema
       let kgWeight = 0
       if (weight && weight.value) {
@@ -200,7 +254,7 @@ exports.post = async ({ appSdk }, req, res) => {
         qtd: quantity
       })
     })
-    const productType = 'ecommerce'
+    const productType = restrict
 
     const productTotalPrice = cartSubtotal || 1
     const quoteType = 'full'
