@@ -271,7 +271,7 @@ exports.post = async ({ appSdk }, req, res) => {
               package: {
                 weight: {
                   value: finalWeight,
-                  unit: 'g'
+                  unit: 'kg'
                 }
               },
               custom_fields: [
