@@ -31,6 +31,12 @@ exports.post = async ({ appSdk }, req, res) => {
     shippingRules = []
   }
 
+  function hasDecimal(number) {
+    return number.toString().includes('.');
+  }
+
+  const selectedStoreId = [51316, 51317]
+
   const token = appData.api_key
   if (!token) {
     // must have configured kangu doc number and token
@@ -162,6 +168,7 @@ exports.post = async ({ appSdk }, req, res) => {
 
       finalWeight += (quantity * kgWeight)
       cartSubtotal += (quantity * ecomUtils.price(item))
+      const isConexao = selectedStoreId.includes(storeId)
       
       const cmDimensions = {}
       if (dimensions) {
@@ -170,7 +177,11 @@ exports.post = async ({ appSdk }, req, res) => {
           if (dimension && dimension.value) {
             switch (dimension.unit) {
               case 'cm':
-                cmDimensions[side] = dimension.value / 100
+                if (isConexao && hasDecimal(dimension.value)) {
+                  cmDimensions[side] = dimension.value
+                } else {
+                  cmDimensions[side] = dimension.value / 100
+                }      
                 break
               case 'mm':
                 cmDimensions[side] = dimension.value / 1000
