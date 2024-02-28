@@ -23,6 +23,7 @@ exports.post = async ({ appSdk }, req, res) => {
   }
   // merge all app options configured by merchant
   const appData = Object.assign({}, application.data, application.hidden_data)
+  const disableShipping = appData.disable_shipping
 
   const categories = [
     "Móveis",
@@ -268,6 +269,10 @@ exports.post = async ({ appSdk }, req, res) => {
       marketplace,
       packages,
       app: 'E-Com Plus'
+    }
+
+    if (disableShipping) {
+      body.denyCarriers = disableShipping.trim()
     }
     // send POST request to kangu REST 
     console.log('Before quote', JSON.stringify(body))

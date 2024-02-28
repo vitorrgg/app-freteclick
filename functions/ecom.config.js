@@ -445,6 +445,15 @@ const app = {
       },
       hide: false
     },
+    disable_shipping: {
+      schema: {
+        type: 'string',
+        maxLength: 100,
+        title: 'Remover transportadoras',
+        description: 'Insira a lista de IDs separados por vírgula de transportadoras que serão removidas do cálculo'
+      },
+      hide: true
+    },
   }
 }
 
