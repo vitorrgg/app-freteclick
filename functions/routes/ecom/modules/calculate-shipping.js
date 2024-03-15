@@ -153,7 +153,7 @@ exports.post = async ({ appSdk }, req, res) => {
         destination.state = data.uf.toUpperCase()
       }
     } catch (error) {
-      console.error(error);
+      console.log('didnt return address');
     }
     return destination
   }
