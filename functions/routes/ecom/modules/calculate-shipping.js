@@ -101,7 +101,8 @@ exports.post = async ({ appSdk }, req, res) => {
     })
   }
 
-  const marketplace = appData.best_quotation
+  const marketplace = true
+  const noCache = !appData.best_quotation
 
   const order = 'total'
 
@@ -267,6 +268,7 @@ exports.post = async ({ appSdk }, req, res) => {
       productTotalPrice,
       quoteType,
       marketplace,
+      noCache,
       packages,
       app: 'E-Com Plus'
     }
@@ -275,7 +277,7 @@ exports.post = async ({ appSdk }, req, res) => {
       body.denyCarriers = disableShipping.trim()
     }
     // send POST request to kangu REST 
-    console.log('Before quote', JSON.stringify(body))
+    //console.log('Before quote', JSON.stringify(body))
     return freteClickApi({
       url: '/quotes',
       method: 'post',
