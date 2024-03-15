@@ -16,7 +16,7 @@ exports.post = ({ appSdk }, req, res) => {
    * Ref.: https://developers.e-com.plus/docs/api/#/store/triggers/
    */
   const trigger = req.body
-
+  console.log('send webhook')
   // get app configured options
   let auth
   appSdk.getAuth(storeId).then(_auth => {
@@ -33,9 +33,10 @@ exports.post = ({ appSdk }, req, res) => {
         err.name = SKIP_TRIGGER_NAME
         throw err
       }
-
+      console.log('preparing to send order', )
       /* DO YOUR CUSTOM STUFF HERE */
       const { api_key, send_tag_status } = appData
+      console.log('preparing to send order', api_key, send_tag_status, trigger.resource === 'orders')
       if (send_tag_status && api_key && trigger.resource === 'orders') {
         // handle order financial status changes
         const order = trigger.body
