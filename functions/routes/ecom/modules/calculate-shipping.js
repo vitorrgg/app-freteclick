@@ -158,7 +158,7 @@ exports.post = async ({ appSdk }, req, res) => {
     }
     return destination
   }
-  console.log('zip to', destination)
+  console.log('zip to', destinationZip)
   const destination = await getAddress(destinationZip)
   const originObj = {}
   if (appData.from && appData.from.city && appData.from.province_code) {
