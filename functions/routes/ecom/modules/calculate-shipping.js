@@ -134,39 +134,9 @@ exports.post = async ({ appSdk }, req, res) => {
     return true
   }
 
-  const getAddress = async (zip) => {
-    const destination = {
-      "city": "Manaus",
-      "state": "AM",
-      "country":  "Brasil"
-    }
 
-    const options = {
-      method: 'GET', 
-      url: `https://viacep.com.br/ws/${zip}/json/`,
-      timeout: 5000
-    };
-    try {
-      const { data } = await axios.request(options);
-      if (data && data.uf && data.localidade) {
-        destination.city = data.localidade
-        destination.state = data.uf.toUpperCase()
-      }
-    } catch (error) {
-      console.log(error)
-      console.log('didnt return address');
-    }
-    return destination
-  }
-  console.log('zip to', destinationZip)
-  const destination = await getAddress(destinationZip)
-  const originObj = {}
-  if (appData.from && appData.from.city && appData.from.province_code) {
-    originObj.city = appData.from.city
-    originObj.state = appData.from.province_code
-    originObj.country = appData.from.country || 'Brasil'
-  }
-  const origin = Object.keys(originObj).length ? originObj : await getAddress(originZip)
+  const destination = destinationZip
+  const origin = originZip
 
   // search for configured free shipping rule
   if (Array.isArray(appData.free_shipping_rules)) {
@@ -276,9 +246,7 @@ exports.post = async ({ appSdk }, req, res) => {
     }
 
     if (disableShipping) {
-      body.denyCarriers = []
-      const disableShippingArray = disableShipping.split(',')
-      disableShippingArray.forEach(item => body.denyCarriers.push(Number(item)))
+      body.denyCarriers = disableShipping.trim().split(',')
     }
     // send POST request to kangu REST 
     //console.log('Before quote', JSON.stringify(body))

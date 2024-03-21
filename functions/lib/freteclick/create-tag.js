@@ -15,7 +15,8 @@ module.exports = async (order, token, storeId, appData, appSdk) => {
   } = await getCompanyId(token)
   const customer = order.buyers && order.buyers.length && order.buyers[0]
   const address = order.shipping_lines && order.shipping_lines.length && order.shipping_lines[0] && order.shipping_lines.length && order.shipping_lines[0].to
-  const retrieve = order.shipping_lines && order.shipping_lines.length && order.shipping_lines[0] && order.shipping_lines.length && order.shipping_lines[0].from || {
+  const retrieve = {
+    ...(order.shipping_lines && order.shipping_lines.length && order.shipping_lines[0] && order.shipping_lines.length && order.shipping_lines[0].from),
     ...appData.from,
     zip: appData.zip
   }
