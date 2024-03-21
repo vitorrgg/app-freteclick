@@ -13,6 +13,7 @@ module.exports = async (order, token, storeId, appData, appSdk) => {
     peopleId,
     companyId
   } = await getCompanyId(token)
+  console.log('people id and company id', peopleId, companyId)
   const customer = order.buyers && order.buyers.length && order.buyers[0]
   const address = order.shipping_lines && order.shipping_lines.length && order.shipping_lines[0] && order.shipping_lines.length && order.shipping_lines[0].to
   const retrieve = {
@@ -32,6 +33,7 @@ module.exports = async (order, token, storeId, appData, appSdk) => {
   const quoteId = freteClickCustom(order, 'freteclick_id')
   const orderId = freteClickCustom(order, 'freteclick_order_id')
   const { id } =  await getOrCreateCustomer(token, customer, address)
+  console.log('id customer', id)
   const data = {
     "quote": quoteId,
       "price": order.amount && order.amount.freight,      
