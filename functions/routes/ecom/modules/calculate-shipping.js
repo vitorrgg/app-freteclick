@@ -153,10 +153,12 @@ exports.post = async ({ appSdk }, req, res) => {
         destination.state = data.uf.toUpperCase()
       }
     } catch (error) {
+      console.log(error)
       console.log('didnt return address');
     }
     return destination
   }
+  console.log('zip to', destination)
   const destination = await getAddress(destinationZip)
   const originObj = {}
   if (appData.from && appData.from.city && appData.from.province_code) {
