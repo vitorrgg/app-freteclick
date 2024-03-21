@@ -276,7 +276,7 @@ exports.post = async ({ appSdk }, req, res) => {
     }
 
     if (disableShipping) {
-      body.denyCarriers = disableShipping.trim()
+      body.denyCarriers = disableShipping.trim().split(',')
     }
     // send POST request to kangu REST 
     //console.log('Before quote', JSON.stringify(body))
