@@ -24,6 +24,7 @@ exports.post = async ({ appSdk }, req, res) => {
   // merge all app options configured by merchant
   const appData = Object.assign({}, application.data, application.hidden_data)
   const disableShipping = appData.disable_shipping
+  const maxCotation = appData.max_quote || 0
 
   const categories = [
     "Móveis",
@@ -276,7 +277,7 @@ exports.post = async ({ appSdk }, req, res) => {
           console.log('Quote with success', storeId)
           const orderId = data.response.data.order.id
           let lowestPriceShipping
-          result.forEach(freteClickService => {
+          result.forEach((freteClickService, index) => {
             const { carrier } = freteClickService
             // parse to E-Com Plus shipping line object
             const serviceCode = carrier && carrier.id
@@ -383,15 +384,26 @@ exports.post = async ({ appSdk }, req, res) => {
             }
 
             const serviceCodeName = shippingName.replaceAll(' ', '_').toLowerCase()
+            if (maxCotation && maxCotation > index) {
+              response.shipping_services.push({
+                label,
+                carrier: freteClickService.name,
+                service_name: serviceCodeName || shippingName,
+                delivery_instructions: 'Gestão Logística via Frete Click',
+                service_code: serviceCode,
+                shipping_line: shippingLine
+              })
+            } else {
+              response.shipping_services.push({
+                label,
+                carrier: freteClickService.name,
+                service_name: serviceCodeName || shippingName,
+                delivery_instructions: 'Gestão Logística via Frete Click',
+                service_code: serviceCode,
+                shipping_line: shippingLine
+              })
+            }
 
-            response.shipping_services.push({
-              label,
-              carrier: freteClickService.name,
-              service_name: serviceCodeName || shippingName,
-              delivery_instructions: 'Gestão Logística via Frete Click',
-              service_code: serviceCode,
-              shipping_line: shippingLine
-            })
           })
 
           if (lowestPriceShipping) {

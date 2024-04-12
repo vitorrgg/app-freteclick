@@ -288,6 +288,16 @@ const app = {
       },
       hide: false
     },
+    max_quote: {
+      schema: {
+        type: 'number',
+        minimum: 1,
+        maximum: 999999,
+        title: 'Quantidade máxima de cotações',
+        description: 'Caso preenchido, será considerada esta quantidade de formas de frete'
+      },
+      hide: false
+    },
     services: {
       schema: {
         title: 'Rótulo dos Serviços',
