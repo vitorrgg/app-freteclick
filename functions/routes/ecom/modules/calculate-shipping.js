@@ -372,7 +372,7 @@ exports.post = async ({ appSdk }, req, res) => {
             }
 
             // change label
-            let label = shippingName + ' via Frete Click'
+            let label = shippingName
             if (appData.services && Array.isArray(appData.services) && appData.services.length) {
               const service = appData.services.find(service => {
                 return service && matchService(service, label)
@@ -388,6 +388,7 @@ exports.post = async ({ appSdk }, req, res) => {
               label,
               carrier: freteClickService.name,
               service_name: serviceCodeName || shippingName,
+              delivery_instructions: 'Gestão Logística via Frete Click',
               service_code: serviceCode,
               shipping_line: shippingLine
             })
