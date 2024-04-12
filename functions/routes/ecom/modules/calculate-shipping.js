@@ -298,6 +298,7 @@ exports.post = async ({ appSdk }, req, res) => {
                 days: parseInt(freteClickService.deliveryDeadline, 10),
                 working_days: true
               },
+              delivery_instructions: 'Gestão Logística via Frete Click',
               posting_deadline: {
                 days: 3,
                 ...appData.posting_deadline
@@ -389,7 +390,6 @@ exports.post = async ({ appSdk }, req, res) => {
                 label,
                 carrier: freteClickService.name,
                 service_name: serviceCodeName || shippingName,
-                delivery_instructions: 'Gestão Logística via Frete Click',
                 service_code: serviceCode,
                 shipping_line: shippingLine
               })
@@ -398,7 +398,6 @@ exports.post = async ({ appSdk }, req, res) => {
                 label,
                 carrier: freteClickService.name,
                 service_name: serviceCodeName || shippingName,
-                delivery_instructions: 'Gestão Logística via Frete Click',
                 service_code: serviceCode,
                 shipping_line: shippingLine
               })
