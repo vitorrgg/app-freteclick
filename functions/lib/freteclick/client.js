@@ -2,8 +2,8 @@ const axios = require('axios')
 
 const instance = axios.create({
   headers: {
-    'Accept': 'application/json',
-    'Content-Type': 'application/json',
+    Accept: 'application/json',
+    'Content-Type': 'application/json'
   }
 })
 
@@ -12,6 +12,7 @@ module.exports = ({
   method,
   token,
   data,
+  timeout = 8000
 }) => {
   const config = {
     url,
@@ -19,13 +20,11 @@ module.exports = ({
     headers: {
       'api-token': token,
       accept: 'application/json',
-      'Content-Type': 'application/json',
-      timeout: 8000
+      'Content-Type': 'application/json'
     },
-    data
+    data,
+    timeout
   }
-
   instance.defaults.baseURL = 'https://api.freteclick.com.br'
-
   return instance(config)
 }
