@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.1.0](https://github.com/ecomplus/application-starter/compare/v1.0.0...v1.1.0) (2024-09-14)
+
+
+### Features
+
+* **calculate-shipping:** set config to disable shipping options ([3657bf3](https://github.com/ecomplus/application-starter/commit/3657bf30fd2513e27dd9c02fa6cecd72ecc27624))
+* **config:** add option to limit shipping quote ([a000ef4](https://github.com/ecomplus/application-starter/commit/a000ef469a790a42bc1dd6465c6535d83efdf83b))
+* **ecom-config:** set new procedure to get paid orders ([ee575a4](https://github.com/ecomplus/application-starter/commit/ee575a468099f7ca6e2be34b48b86993427f72ed))
+* send tag partial ([211d33a](https://github.com/ecomplus/application-starter/commit/211d33a9c9d63c4f8d49851fdb98ece45427024e))
+* supporting warehouses (multi cd) ou calculate shipping and tag creation ([161dfaa](https://github.com/ecomplus/application-starter/commit/161dfaaa24d89efedb35b5c423db7af01fb49d41))
+
+
+### Bug Fixes
+
+* **calculate-shipping:** use carrier name instead of service name ([0d2ca7f](https://github.com/ecomplus/application-starter/commit/0d2ca7f7e2be7e07abcf9244ae3be463efc3db88))
+* **deps:** update all non-major ([e1bab5c](https://github.com/ecomplus/application-starter/commit/e1bab5c0f0ab3e7012026176a3c64ee9ee5e93ee))
+* **deps:** update all non-major ([4779dad](https://github.com/ecomplus/application-starter/commit/4779dad26222408c4d510296a4ba68daca631a45))
+* fix setting timeout to freteclick api requests ([558298a](https://github.com/ecomplus/application-starter/commit/558298a328afa8fd6430cd27dfced08ed349a392))
+
 ## 1.0.0 (2024-01-23)
 
 
