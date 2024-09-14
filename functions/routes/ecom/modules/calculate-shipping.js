@@ -1,4 +1,3 @@
-const axios = require('axios')
 const ecomUtils = require('@ecomplus/utils')
 const freteClickApi = require('../../../lib/freteclick/client')
 
@@ -26,60 +25,6 @@ exports.post = async ({ appSdk }, req, res) => {
   const disableShipping = appData.disable_shipping
   const maxCotation = appData.max_quote || 0
 
-  const categories = [
-    "Móveis",
-    "Alimentício não perecível",
-    "Alimentício perecível",
-    "Animais",
-    "Armamento e munições",
-    "Armário de Aço",
-    "Artigo decoração",
-    "Automotivo",
-    "Automotivo (peças usadas)",
-    "Banheiras",
-    "Baterias em geral",
-    "Bebidas",
-    "Brinquedos",
-    "Carga Refrigerada",
-    "Cigarro",
-    "Construção em geral",
-    "Construção - Piso de borracha",
-    "Construção - Pisos, Azulejos e Revestimentos",
-    "Dinheiro (moeda e papel)",
-    "Eletrodomésticos",
-    "Eletrônicos",
-    "Eletro-portátil",
-    "Energia Solar",
-    "Equipamentos",
-    "Equipamentos esportivos",
-    "Ferramentas",
-    "Fios e Cabos",
-    "Jóias e semi-jóias",
-    "Livros",
-    "Máquinas",
-    "Metais preciosos",
-    "Motores novos",
-    "Motores usados",
-    "Móveis usados",
-    "Mudança (móveis e documentos)",
-    "Objeto de Arte",
-    "Papelaria",
-    "Plantas",
-    "Pneus",
-    "Produto químico não-perigoso",
-    "Produto químico perigoso",
-    "Quadro",
-    "Roupas e calçados",
-    "Siderurgia",
-    "Tecido",
-    "Tinta base água",
-    "Tinta base solvente",
-    "Utensílio plástico",
-    "Vidro"
-  ];
-
-
-
   let shippingRules
   if (Array.isArray(appData.shipping_rules) && appData.shipping_rules.length) {
     shippingRules = appData.shipping_rules
@@ -87,8 +32,8 @@ exports.post = async ({ appSdk }, req, res) => {
     shippingRules = []
   }
 
-  function hasDecimal(number) {
-    return number.toString().includes('.');
+  function hasDecimal (number) {
+    return number.toString().includes('.')
   }
 
   const selectedStoreId = [51316, 51317]
@@ -104,8 +49,6 @@ exports.post = async ({ appSdk }, req, res) => {
 
   const marketplace = true
   const noCache = !appData.best_quotation
-
-  const order = 'total'
 
   if (appData.free_shipping_from_value >= 0) {
     response.free_shipping_from_value = appData.free_shipping_from_value
@@ -134,7 +77,6 @@ exports.post = async ({ appSdk }, req, res) => {
     }
     return true
   }
-
 
   const destination = destinationZip
   const origin = originZip
@@ -171,9 +113,10 @@ exports.post = async ({ appSdk }, req, res) => {
     })
   }
 
-  console.log('Before quote', storeId)
-  const isVidro = params.items.some(({name}) => name.includes('crista') || name.includes('espelh') || name.includes('vidr'))
-  let restrict = isVidro ? 'Vidro' : 'Móveis'
+  const isVidro = params.items.some(({ name }) => {
+    return name.includes('crista') || name.includes('espelh') || name.includes('vidr')
+  })
+  const restrict = isVidro ? 'Vidro' : 'Móveis'
   if (params.items) {
     let finalWeight = 0
     let cartSubtotal = 0
@@ -198,7 +141,6 @@ exports.post = async ({ appSdk }, req, res) => {
       finalWeight += (quantity * kgWeight)
       cartSubtotal += (quantity * ecomUtils.price(item))
       const isConexao = selectedStoreId.includes(storeId)
-      
       const cmDimensions = {}
       if (dimensions) {
         for (const side in dimensions) {
@@ -210,7 +152,7 @@ exports.post = async ({ appSdk }, req, res) => {
                   cmDimensions[side] = dimension.value
                 } else {
                   cmDimensions[side] = dimension.value / 100
-                }      
+                }
                 break
               case 'mm':
                 cmDimensions[side] = dimension.value / 1000
@@ -249,181 +191,178 @@ exports.post = async ({ appSdk }, req, res) => {
     if (disableShipping) {
       body.denyCarriers = disableShipping.trim().split(',')
     }
-    // send POST request to kangu REST 
-    //console.log('Before quote', JSON.stringify(body))
     return freteClickApi({
       url: '/quotes',
       method: 'post',
       token,
       data: body
     }).then(({ data, status }) => {
-        let result
-        if (typeof data === 'string') {
-          try {
-            result = JSON.parse(data)
-          } catch (e) {
-            console.log('> Frete Click invalid JSON response', data)
-            return res.status(409).send({
-              error: 'CALCULATE_INVALID_RES',
-              message: data
+      let result
+      if (typeof data === 'string') {
+        try {
+          result = JSON.parse(data)
+        } catch (e) {
+          console.log('> Frete Click invalid JSON response', data)
+          return res.status(409).send({
+            error: 'CALCULATE_INVALID_RES',
+            message: data
+          })
+        }
+      } else {
+        result = data && data.response && data.response.data && data.response.data.order && data.response.data.order.quotes
+      }
+
+      if (result && Number(status) === 200 && Array.isArray(result)) {
+        // success response
+        console.log('Quote with success', storeId)
+        const orderId = data.response.data.order.id
+        let lowestPriceShipping
+        result.forEach((freteClickService, index) => {
+          const { carrier } = freteClickService
+          // parse to E-Com Plus shipping line object
+          const serviceCode = carrier && carrier.id
+          const price = freteClickService.total
+
+          // push shipping service object to response
+          const shippingLine = {
+            from: {
+              ...params.from,
+              ...appData.from,
+              zip: originZip
+            },
+            to: params.to,
+            price,
+            total_price: price,
+            discount: 0,
+            delivery_time: {
+              days: parseInt(freteClickService.deliveryDeadline, 10),
+              working_days: true
+            },
+            delivery_instructions: 'Gestão Logística via Frete Click',
+            posting_deadline: {
+              days: 3,
+              ...appData.posting_deadline
+            },
+            package: {
+              weight: {
+                value: finalWeight,
+                unit: 'kg'
+              }
+            },
+            custom_fields: [
+              {
+                field: 'freteclick_id',
+                value: freteClickService.id
+              },
+              {
+                field: 'freteclick_order_id',
+                value: orderId
+              }
+            ],
+            flags: ['freteclick-ws', `freteclick-${serviceCode}`.substr(0, 20)]
+          }
+          if (!lowestPriceShipping || lowestPriceShipping.price > price) {
+            lowestPriceShipping = shippingLine
+          }
+
+          if (shippingLine.posting_deadline && shippingLine.posting_deadline.days >= 0) {
+            shippingLine.posting_deadline.days += parseInt(freteClickService.retrieveDeadline, 10)
+          }
+
+          // check for default configured additional/discount price
+          if (appData.additional_price) {
+            if (appData.additional_price > 0) {
+              shippingLine.other_additionals = [{
+                tag: 'additional_price',
+                label: 'Adicional padrão',
+                price: appData.additional_price
+              }]
+            } else {
+              // negative additional price to apply discount
+              shippingLine.discount -= appData.additional_price
+            }
+            // update total price
+            shippingLine.total_price += appData.additional_price
+          }
+
+          // search for discount by shipping rule
+          const shippingName = carrier.alias || carrier.name
+          if (Array.isArray(shippingRules)) {
+            for (let i = 0; i < shippingRules.length; i++) {
+              const rule = shippingRules[i]
+              if (
+                rule &&
+                matchService(rule, shippingName) &&
+                checkZipCode(rule) &&
+                !(rule.min_amount > params.subtotal)
+              ) {
+                // valid shipping rule
+                if (rule.discount && rule.service_name) {
+                  let discountValue = rule.discount.value
+                  if (rule.discount.percentage) {
+                    discountValue *= (shippingLine.total_price / 100)
+                  }
+                  shippingLine.discount += discountValue
+                  shippingLine.total_price -= discountValue
+                  if (shippingLine.total_price < 0) {
+                    shippingLine.total_price = 0
+                  }
+                  break
+                }
+              }
+            }
+          }
+
+          // change label
+          let label = shippingName
+          if (appData.services && Array.isArray(appData.services) && appData.services.length) {
+            const service = appData.services.find(service => {
+              return service && matchService(service, label)
+            })
+            if (service && service.label) {
+              label = service.label
+            }
+          }
+
+          const serviceCodeName = shippingName.replaceAll(' ', '_').toLowerCase()
+          if (maxCotation && maxCotation > index) {
+            response.shipping_services.push({
+              label,
+              carrier: freteClickService.name,
+              service_name: serviceCodeName || shippingName,
+              service_code: serviceCode,
+              shipping_line: shippingLine
+            })
+          } else {
+            response.shipping_services.push({
+              label,
+              carrier: freteClickService.name,
+              service_name: serviceCodeName || shippingName,
+              service_code: serviceCode,
+              shipping_line: shippingLine
             })
           }
-        } else {
-          result = data && data.response && data.response.data && data.response.data.order && data.response.data.order.quotes
-        }
+        })
 
-        if (result && Number(status) === 200 && Array.isArray(result)) {
-          // success response
-          console.log('Quote with success', storeId)
-          const orderId = data.response.data.order.id
-          let lowestPriceShipping
-          result.forEach((freteClickService, index) => {
-            const { carrier } = freteClickService
-            // parse to E-Com Plus shipping line object
-            const serviceCode = carrier && carrier.id
-            const price = freteClickService.total
-
-            // push shipping service object to response
-            const shippingLine = {
-              from: {
-                ...params.from,
-                ...appData.from,
-                zip: originZip
-              },
-              to: params.to,
-              price,
-              total_price: price,
-              discount: 0,
-              delivery_time: {
-                days: parseInt(freteClickService.deliveryDeadline, 10),
-                working_days: true
-              },
-              delivery_instructions: 'Gestão Logística via Frete Click',
-              posting_deadline: {
-                days: 3,
-                ...appData.posting_deadline
-              },
-              package: {
-                weight: {
-                  value: finalWeight,
-                  unit: 'kg'
-                }
-              },
-              custom_fields: [
-                {
-                  field: 'freteclick_id',
-                  value: freteClickService.id
-                },
-                {
-                  field: 'freteclick_order_id',
-                  value: orderId
-                }
-              ],
-              flags: ['freteclick-ws', `freteclick-${serviceCode}`.substr(0, 20)]
-            }
-            if (!lowestPriceShipping || lowestPriceShipping.price > price) {
-              lowestPriceShipping = shippingLine
-            }
-
-            if (shippingLine.posting_deadline && shippingLine.posting_deadline.days >= 0) {
-              shippingLine.posting_deadline.days += parseInt(freteClickService.retrieveDeadline, 10)
-            }
-
-            // check for default configured additional/discount price
-            if (appData.additional_price) {
-              if (appData.additional_price > 0) {
-                shippingLine.other_additionals = [{
-                  tag: 'additional_price',
-                  label: 'Adicional padrão',
-                  price: appData.additional_price
-                }]
-              } else {
-                // negative additional price to apply discount
-                shippingLine.discount -= appData.additional_price
-              }
-              // update total price
-              shippingLine.total_price += appData.additional_price
-            }
-
-            // search for discount by shipping rule
-            const shippingName = carrier.alias || carrier.name
-            if (Array.isArray(shippingRules)) {
-              for (let i = 0; i < shippingRules.length; i++) {
-                const rule = shippingRules[i]
-                if (
-                  rule &&
-                  matchService(rule, shippingName) &&
-                  checkZipCode(rule) &&
-                  !(rule.min_amount > params.subtotal)
-                ) {
-                  // valid shipping rule
-                  if (rule.discount && rule.service_name) {
-                    let discountValue = rule.discount.value
-                    if (rule.discount.percentage) {
-                      discountValue *= (shippingLine.total_price / 100)
-                    }
-                    shippingLine.discount += discountValue
-                    shippingLine.total_price -= discountValue
-                    if (shippingLine.total_price < 0) {
-                      shippingLine.total_price = 0
-                    }
-                    break
-                  }
-                }
-              }
-            }
-
-            // change label
-            let label = shippingName
-            if (appData.services && Array.isArray(appData.services) && appData.services.length) {
-              const service = appData.services.find(service => {
-                return service && matchService(service, label)
-              })
-              if (service && service.label) {
-                label = service.label
-              }
-            }
-
-            const serviceCodeName = shippingName.replaceAll(' ', '_').toLowerCase()
-            if (maxCotation && maxCotation > index) {
-              response.shipping_services.push({
-                label,
-                carrier: freteClickService.name,
-                service_name: serviceCodeName || shippingName,
-                service_code: serviceCode,
-                shipping_line: shippingLine
-              })
-            } else {
-              response.shipping_services.push({
-                label,
-                carrier: freteClickService.name,
-                service_name: serviceCodeName || shippingName,
-                service_code: serviceCode,
-                shipping_line: shippingLine
-              })
-            }
-
-          })
-
-          if (lowestPriceShipping) {
-            const { price } = lowestPriceShipping
-            const discount = typeof response.free_shipping_from_value === 'number' &&
-              response.free_shipping_from_value <= cartSubtotal
-              ? price
-              : 0
-            if (discount) {
-              lowestPriceShipping.total_price = price - discount
-              lowestPriceShipping.discount = discount
-            }
+        if (lowestPriceShipping) {
+          const { price } = lowestPriceShipping
+          const discount = typeof response.free_shipping_from_value === 'number' &&
+            response.free_shipping_from_value <= cartSubtotal
+            ? price
+            : 0
+          if (discount) {
+            lowestPriceShipping.total_price = price - discount
+            lowestPriceShipping.discount = discount
           }
-          res.send(response)
-        } else {
-          // console.log(data)
-          const err = new Error('Invalid Frete Click calculate response', storeId, JSON.stringify(body))
-          err.response = { data, status }
-          throw err
         }
-      })
+        res.send(response)
+      } else {
+        // console.log(data)
+        const err = new Error('Invalid Frete Click calculate response', storeId, JSON.stringify(body))
+        err.response = { data, status }
+        throw err
+      }
+    })
       .catch(err => {
         let { message, response } = err
         console.log('>> Frete Click message error', message)
