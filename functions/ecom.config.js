@@ -141,16 +141,16 @@ const app = {
     /**
      * JSON schema based fields to be configured by merchant and saved to app `data` / `hidden_data`, such as:
 */
-      zip: {
-        schema: {
-          type: 'string',
-          maxLength: 9,
-          pattern: '^[0-9]{5}-?[0-9]{3}$',
-          title: 'CEP de origem'
-        },
-        hide: true
+    zip: {
+      schema: {
+        type: 'string',
+        maxLength: 9,
+        pattern: '^[0-9]{5}-?[0-9]{3}$',
+        title: 'CEP de origem'
       },
-     api_key: {
+      hide: true
+    },
+    api_key: {
       schema: {
         type: 'string',
         maxLength: 600,
@@ -464,6 +464,89 @@ const app = {
       },
       hide: true
     },
+    warehouses: {
+      schema: {
+        title: 'Armazéns (multi CD)',
+        description: 'Origens e destinos para cada centro de distribuição',
+        type: 'array',
+        maxItems: 30,
+        items: {
+          title: 'Centro de distribuição',
+          type: 'object',
+          required: ['code', 'zip'],
+          additionalProperties: false,
+          properties: {
+            code: {
+              type: 'string',
+              maxLength: 30,
+              pattern: '^[A-Za-z0-9-_]{2,30}$',
+              title: 'Código do CD'
+            },
+            api_key: {
+              type: 'string',
+              maxLength: 600,
+              title: 'Api Key',
+              description: 'Api Key da Frete Click específica para o CD, se houver'
+            },
+            zip: {
+              type: 'string',
+              maxLength: 9,
+              pattern: '^[0-9]{5}-?[0-9]{3}$',
+              title: 'CEP de origem',
+              description: 'Código postal do remetente para cálculo do frete'
+            },
+            posting_deadline: {
+              title: 'Prazo de envio do CD',
+              type: 'object',
+              required: ['days'],
+              additionalProperties: false,
+              properties: {
+                days: {
+                  type: 'integer',
+                  minimum: 0,
+                  maximum: 999999,
+                  title: 'Número de dias',
+                  description: 'Dias de prazo para postar os produtos após a compra'
+                },
+                working_days: {
+                  type: 'boolean',
+                  default: true,
+                  title: 'Dias úteis'
+                },
+                after_approval: {
+                  type: 'boolean',
+                  default: true,
+                  title: 'Após aprovação do pagamento'
+                }
+              }
+            },
+            zip_range: {
+              title: 'Faixa de CEP atendida',
+              type: 'object',
+              required: [
+                'min',
+                'max'
+              ],
+              properties: {
+                min: {
+                  type: 'integer',
+                  minimum: 10000,
+                  maximum: 999999999,
+                  title: 'CEP inicial'
+                },
+                max: {
+                  type: 'integer',
+                  minimum: 10000,
+                  maximum: 999999999,
+                  title: 'CEP final'
+                }
+              }
+            }
+          }
+        }
+      },
+      hide: true
+    },
   }
 }
 
@@ -474,9 +557,7 @@ const app = {
 
 const procedures = []
 
-
- /** Uncomment and edit code above to configure `triggers` and receive respective `webhooks`:
-**/
+/** Uncomment and edit code above to configure `triggers` and receive respective `webhooks`: **/
 const { baseUri } = require('./__env')
 
 procedures.push({
@@ -508,8 +589,7 @@ procedures.push({
   ]
 })
 
- /* You may also edit `routes/ecom/webhook.js` to treat notifications properly.
- */
+/* You may also edit `routes/ecom/webhook.js` to treat notifications properly. */
 
 exports.app = app
 

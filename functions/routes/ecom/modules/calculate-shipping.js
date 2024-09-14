@@ -38,7 +38,7 @@ exports.post = async ({ appSdk }, req, res) => {
 
   const selectedStoreId = [51316, 51317]
 
-  const token = appData.api_key
+  let token = appData.api_key
   if (!token) {
     // must have configured kangu doc number and token
     return res.status(409).send({
@@ -55,9 +55,47 @@ exports.post = async ({ appSdk }, req, res) => {
   }
 
   const destinationZip = params.to ? params.to.zip.replace(/\D/g, '') : ''
-  const originZip = params.from
-    ? params.from.zip.replace(/\D/g, '')
-    : appData.zip ? appData.zip.replace(/\D/g, '') : ''
+  const checkZipCode = (rule) => {
+    // validate rule zip range
+    if (destinationZip && rule.zip_range) {
+      const { min, max } = rule.zip_range
+      return Boolean((!min || destinationZip >= min) && (!max || destinationZip <= max))
+    }
+    return true
+  }
+
+  let originZip, warehouseCode
+  let postingDeadline = appData.posting_deadline
+  if (params.from) {
+    originZip = params.from.zip
+  } else if (Array.isArray(appData.warehouses) && appData.warehouses.length) {
+    for (let i = 0; i < appData.warehouses.length; i++) {
+      const warehouse = appData.warehouses[i]
+      if (warehouse?.zip && checkZipCode(warehouse)) {
+        const { code } = warehouse
+        if (!code) continue
+        if (params.items) {
+          const itemNotOnWarehouse = params.items.find(({ quantity, inventory }) => {
+            return inventory && Object.keys(inventory).length && !(inventory[code] >= quantity)
+          })
+          if (itemNotOnWarehouse) continue
+        }
+        originZip = warehouse.zip
+        if (warehouse.posting_deadline?.days) {
+          postingDeadline = warehouse.posting_deadline
+        }
+        if (warehouse.api_key) {
+          token = warehouse.api_key
+        }
+        warehouseCode = code
+      }
+    }
+  }
+
+  if (!originZip) {
+    originZip = appData.zip
+  }
+  originZip = typeof originZip === 'string' ? originZip.replace(/\D/g, '') : ''
 
   const matchService = (service, name) => {
     const fields = ['service_name', 'service_code']
@@ -68,18 +106,6 @@ exports.post = async ({ appSdk }, req, res) => {
     }
     return true
   }
-
-  const checkZipCode = rule => {
-    // validate rule zip range
-    if (destinationZip && rule.zip_range) {
-      const { min, max } = rule.zip_range
-      return Boolean((!min || destinationZip >= min) && (!max || destinationZip <= max))
-    }
-    return true
-  }
-
-  const destination = destinationZip
-  const origin = originZip
 
   // search for configured free shipping rule
   if (Array.isArray(appData.free_shipping_rules)) {
@@ -102,9 +128,6 @@ exports.post = async ({ appSdk }, req, res) => {
     res.send(response)
     return
   }
-
-  /* DO THE STUFF HERE TO FILL RESPONSE OBJECT WITH SHIPPING SERVICES */
-
   if (!originZip) {
     // must have configured origin zip code to continue
     return res.status(409).send({
@@ -177,8 +200,8 @@ exports.post = async ({ appSdk }, req, res) => {
     const quoteType = 'full'
 
     const body = {
-      destination,
-      origin,
+      destination: destinationZip,
+      origin: originZip,
       productType,
       productTotalPrice,
       quoteType,
@@ -195,7 +218,8 @@ exports.post = async ({ appSdk }, req, res) => {
       url: '/quotes',
       method: 'post',
       token,
-      data: body
+      data: body,
+      timeout: (params.is_checkout_confirmation ? 8000 : 4000)
     }).then(({ data, status }) => {
       let result
       if (typeof data === 'string') {
@@ -209,12 +233,11 @@ exports.post = async ({ appSdk }, req, res) => {
           })
         }
       } else {
-        result = data && data.response && data.response.data && data.response.data.order && data.response.data.order.quotes
+        result = data?.response?.data?.order?.quotes
       }
 
       if (result && Number(status) === 200 && Array.isArray(result)) {
         // success response
-        console.log('Quote with success', storeId)
         const orderId = data.response.data.order.id
         let lowestPriceShipping
         result.forEach((freteClickService, index) => {
@@ -241,7 +264,7 @@ exports.post = async ({ appSdk }, req, res) => {
             delivery_instructions: 'Gestão Logística via Frete Click',
             posting_deadline: {
               days: 3,
-              ...appData.posting_deadline
+              ...postingDeadline
             },
             package: {
               weight: {
@@ -259,13 +282,13 @@ exports.post = async ({ appSdk }, req, res) => {
                 value: orderId
               }
             ],
+            warehouse_code: warehouseCode,
             flags: ['freteclick-ws', `freteclick-${serviceCode}`.substr(0, 20)]
           }
           if (!lowestPriceShipping || lowestPriceShipping.price > price) {
             lowestPriceShipping = shippingLine
           }
-
-          if (shippingLine.posting_deadline && shippingLine.posting_deadline.days >= 0) {
+          if (shippingLine.posting_deadline?.days >= 0) {
             shippingLine.posting_deadline.days += parseInt(freteClickService.retrieveDeadline, 10)
           }
 

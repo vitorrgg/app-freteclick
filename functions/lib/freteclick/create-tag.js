@@ -4,9 +4,16 @@ const getOrCreateCustomer = require('./customer')
 const getCompanyId = require('./me')
 const client = require('./client')
 
-module.exports = async (order, token, storeId, appData, appSdk) => {
-// create new shipping tag with Kangu
-// https://portal.kangu.com.br/docs/api/transporte/#/
+module.exports = async (order, storeId, appData, appSdk) => {
+  let token = appData.api_key
+  const shippingLine = order.shipping_lines[0]
+  const warehouseCode = shippingLine.warehouse_code
+  if (warehouseCode) {
+    const warehouse = appData.warehouses?.find(({ code }) => code === warehouseCode)
+    if (warehouse.api_key) {
+      token = warehouse.api_key
+    }
+  }
   const {
     peopleId,
     companyId
@@ -15,9 +22,9 @@ module.exports = async (order, token, storeId, appData, appSdk) => {
   const customer = order.buyers?.[0]
   const address = order.shipping_lines?.[0]?.to
   const retrieve = {
-    ...(order.shipping_lines?.[0]?.from),
     ...appData.from,
-    zip: appData.zip
+    zip: appData.zip,
+    ...(order.shipping_lines?.[0]?.from)
   }
   const freteClickCustom = (order, field) => {
     const shippingCustom = order.shipping_lines[0] && order.shipping_lines[0].custom_fields

@@ -55,7 +55,7 @@ exports.post = ({ appSdk }, req, res) => {
                 return res.send(ECHO_SKIP)
               }
               console.log(`Shipping tag for #${storeId} ${order._id}`)
-              return createTag(order, api_key, storeId, appData, appSdk)
+              return createTag(order, storeId, appData, appSdk)
                 .then(data => {
                   console.log(`>> Etiqueta Criada Com Sucesso #${storeId} ${resourceId}`, data)
                   // updates metafields with the generated tag id
