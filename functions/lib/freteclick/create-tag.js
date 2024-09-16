@@ -4,6 +4,16 @@ const getOrCreateCustomer = require('./customer')
 const getCompanyId = require('./me')
 const client = require('./client')
 
+const debugAxiosError = error => {
+  const err = new Error(error.message)
+  if (error.response) {
+    err.status = error.response.status
+    err.response = error.response.data
+  }
+  err.request = error.config
+  logger.error(err)
+}
+
 module.exports = async (order, storeId, appData, appSdk) => {
   let token = appData.api_key
   const shippingLine = order.shipping_lines[0]
@@ -14,11 +24,8 @@ module.exports = async (order, storeId, appData, appSdk) => {
       token = warehouse.api_key
     }
   }
-  const {
-    peopleId,
-    companyId
-  } = await getCompanyId(token)
-  console.log('people id and company id', peopleId, companyId)
+  const { peopleId, companyId } = await getCompanyId(token)
+  logger.info(`Freteclick ids for #${storeId}`, { peopleId, companyId })
   const customer = order.buyers?.[0]
   const address = order.shipping_lines?.[0]?.to
   const retrieve = {
@@ -37,8 +44,18 @@ module.exports = async (order, storeId, appData, appSdk) => {
   }
   const quoteId = freteClickCustom(order, 'freteclick_id')
   const orderId = freteClickCustom(order, 'freteclick_order_id')
-  const { id } = await getOrCreateCustomer(token, customer, address)
-  console.log('id customer', id)
+  let id
+  try {
+    id = (await getOrCreateCustomer(token, customer, address)).id
+  } catch (error) {
+    if (error.response) {
+      debugAxiosError(error)
+    } else {
+      logger.error(error)
+    }
+    throw error
+  }
+  logger.info(`Freteclick customer ${id} for #${storeId}`)
   const data = {
     "quote": quoteId,
     "price": order.amount && order.amount.freight,
@@ -74,26 +91,16 @@ module.exports = async (order, storeId, appData, appSdk) => {
       "contact": id
     }
   }
-
-  const debugAxiosError = error => {
-    const err = new Error(error.message)
-    if (error.response) {
-      err.status = error.response.status
-      err.response = error.response.data
-    }
-    err.request = error.config
-    logger.error(err)
-  }
-  console.log('frete click body', JSON.stringify(data))
+  logger.info(`Freteclick tag for ${storeId} ${order._id}`, { data })
 
   return client({
     url: `/purchasing/orders/${orderId}/choose-quote`,
     method: 'put',
     token,
     data
-  }).then(res => res.data)
+  })
+    .then(res => res.data)
     .catch(err => {
-      console.log('erro ao gerar tag', err)
       debugAxiosError(err)
       throw err
     })

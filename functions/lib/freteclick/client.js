@@ -13,8 +13,9 @@ module.exports = ({
   token,
   data,
   timeout = 8000
-}) => {
+}, axiosConfig = {}) => {
   const config = {
+    ...axiosConfig,
     url,
     method,
     headers: {
