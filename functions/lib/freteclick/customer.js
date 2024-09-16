@@ -14,7 +14,7 @@ module.exports = async (token, customer, address) => {
     })
     if (!data?.response?.data) {
       const err = new Error('Unexpected Freteclick response on customer list')
-      err.data = data
+      err.data = data && JSON.stringify(data)
       throw err
     }
     const { id: listedCustomerId } = data.response.data
@@ -53,7 +53,7 @@ module.exports = async (token, customer, address) => {
   const { id: newCustomerId } = postResponse?.data?.response?.data || {}
   if (!newCustomerId) {
     const err = new Error('Unexpected Freteclick response on customer creation')
-    err.data = postResponse?.data
+    err.data = postResponse?.data && JSON.stringify(postResponse.data)
     throw err
   }
   return {
