@@ -1,7 +1,7 @@
 /* eslint-disable quote-props, quotes */
 const { logger } = require('firebase-functions')
-const getOrCreateCustomer = require('./customer')
-const getCompanyId = require('./me')
+const getOrCreateCustomerId = require('./customer')
+const getCompany = require('./me')
 const client = require('./client')
 
 const debugAxiosError = error => {
@@ -24,8 +24,8 @@ module.exports = async (order, storeId, appData, appSdk) => {
       token = warehouse.api_key
     }
   }
-  const { peopleId, companyId } = await getCompanyId(token)
-  logger.info(`Freteclick ids for #${storeId}`, { peopleId, companyId })
+  const fcCompany = await getCompany(token)
+  logger.info(`Freteclick ids for #${storeId}`, { fcCompany })
   const customer = order.buyers?.[0]
   const address = order.shipping_lines?.[0]?.to
   const retrieve = {
@@ -42,11 +42,11 @@ module.exports = async (order, storeId, appData, appSdk) => {
       return false
     }
   }
-  const quoteId = freteClickCustom(order, 'freteclick_id')
-  const orderId = freteClickCustom(order, 'freteclick_order_id')
-  let id
+  const fcQuoteId = freteClickCustom(order, 'freteclick_id')
+  const fcOrderId = freteClickCustom(order, 'freteclick_order_id')
+  let fcCustomerId
   try {
-    id = (await getOrCreateCustomer(token, customer, address)).id
+    fcCustomerId = await getOrCreateCustomerId(token, customer, address)
   } catch (error) {
     if (error.response) {
       error.message = `Request failed handling customer for #${storeId} ${order._id}`
@@ -56,13 +56,13 @@ module.exports = async (order, storeId, appData, appSdk) => {
     }
     throw error
   }
-  logger.info(`Freteclick customer ${id} for #${storeId} ${order._id}`)
+  logger.info(`Freteclick customer ${fcCustomerId} for #${storeId} ${order._id}`)
   const data = {
-    "quote": quoteId,
+    "quote": fcQuoteId,
     "price": order.amount && order.amount.freight,
-    "payer": companyId,
+    "payer": fcCompany.companyId,
     "retrieve": {
-      "id": companyId,
+      "id": fcCompany.companyId,
       "address": {
         "id": null,
         "country": retrieve.country || "Brasil",
@@ -74,10 +74,10 @@ module.exports = async (order, storeId, appData, appSdk) => {
         "number": String(retrieve.number || 0),
         "postal_code": String(retrieve.zip.replace(/\D/g, ''))
       },
-      "contact": peopleId
+      "contact": fcCompany.peopleId
     },
     "delivery": {
-      id,
+      fcOrderId,
       "address": {
         "id": null,
         "country": address.country || "Brasil",
@@ -89,13 +89,13 @@ module.exports = async (order, storeId, appData, appSdk) => {
         "number": String(address.number || 0),
         "postal_code": String(address.zip.replace(/\D/g, ''))
       },
-      "contact": id
+      "contact": fcOrderId
     }
   }
   logger.info(`Freteclick tag for #${storeId} ${order._id}`, { data })
 
   return client({
-    url: `/purchasing/orders/${orderId}/choose-quote`,
+    url: `/purchasing/orders/${fcOrderId}/choose-quote`,
     method: 'put',
     token,
     data

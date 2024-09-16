@@ -17,12 +17,8 @@ module.exports = async (token, customer, address) => {
       err.data = data && JSON.stringify(data)
       throw err
     }
-    const { id: listedCustomerId } = data.response.data
-    if (listedCustomerId) {
-      return {
-        id: listedCustomerId
-      }
-    }
+    const id = data.response.data.peopleId || data.response.data.id
+    if (id) return id
   } catch (error) {
     if (error.response?.status !== 404) {
       throw error
@@ -44,19 +40,17 @@ module.exports = async (token, customer, address) => {
       postal_code: String(address.zip.replace(/\D/g, ''))
     }
   }
-  const postResponse = await freteClickApi({
+  const { data } = await freteClickApi({
     url: '/people/customer',
     method: 'post',
     token,
     data: body
   })
-  const { id: newCustomerId } = postResponse?.data?.response?.data || {}
-  if (!newCustomerId) {
-    const err = new Error('Unexpected Freteclick response on customer creation')
-    err.data = postResponse?.data && JSON.stringify(postResponse.data)
-    throw err
+  if (data?.response?.data) {
+    const id = data.response.data.peopleId || data.response.data.id
+    if (id) return id
   }
-  return {
-    id: newCustomerId
-  }
+  const err = new Error('Unexpected Freteclick response on customer creation')
+  err.data = data && JSON.stringify(data)
+  throw err
 }
