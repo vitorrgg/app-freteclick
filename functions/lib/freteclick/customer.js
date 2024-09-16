@@ -2,24 +2,30 @@ const freteClickApi = require('./client')
 const ecomUtils = require('@ecomplus/utils')
 
 module.exports = async (token, customer, address) => {
-  const { data } = await freteClickApi({
-    url: `/people/customer?email=${customer.main_email}`,
-    method: 'get',
-    token
-  }, {
-    validateStatus (status) {
-      return status === 200
+  try {
+    const { data } = await freteClickApi({
+      url: `/people/customer?email=${customer.main_email}`,
+      method: 'get',
+      token
+    }, {
+      validateStatus (status) {
+        return status === 200
+      }
+    })
+    if (!data?.response?.data) {
+      const err = new Error('Unexpected Freteclick response on customer list')
+      err.data = data
+      throw err
     }
-  })
-  if (!data?.response?.data) {
-    const err = new Error('Unexpected Freteclick response on customer list')
-    err.data = data
-    throw err
-  }
-  const { id: listedCustomerId } = data.response.data
-  if (listedCustomerId) {
-    return {
-      id: listedCustomerId
+    const { id: listedCustomerId } = data.response.data
+    if (listedCustomerId) {
+      return {
+        id: listedCustomerId
+      }
+    }
+  } catch (error) {
+    if (error.response?.status !== 404) {
+      throw error
     }
   }
   const body = {
