@@ -34,8 +34,8 @@ module.exports = async (order, storeId, appData, appSdk) => {
     ...(order.shipping_lines?.[0]?.from)
   }
   const freteClickCustom = (order, field) => {
-    const shippingCustom = order.shipping_lines[0] && order.shipping_lines[0].custom_fields
-    const customField = shippingCustom.find(custom => custom.field === field)
+    const shippingCustom = order.shipping_lines?.[0]?.custom_fields
+    const customField = shippingCustom?.find(custom => custom.field === field)
     if (customField !== undefined && customField !== 'false') {
       return customField.value
     } else {
@@ -49,13 +49,14 @@ module.exports = async (order, storeId, appData, appSdk) => {
     id = (await getOrCreateCustomer(token, customer, address)).id
   } catch (error) {
     if (error.response) {
+      error.message = `Request failed handling customer for #${storeId} ${order._id}`
       debugAxiosError(error)
     } else {
-      logger.error(error)
+      logger.error(error, { storeId, orderId: order._id })
     }
     throw error
   }
-  logger.info(`Freteclick customer ${id} for #${storeId}`)
+  logger.info(`Freteclick customer ${id} for #${storeId} ${order._id}`)
   const data = {
     "quote": quoteId,
     "price": order.amount && order.amount.freight,
@@ -91,7 +92,7 @@ module.exports = async (order, storeId, appData, appSdk) => {
       "contact": id
     }
   }
-  logger.info(`Freteclick tag for ${storeId} ${order._id}`, { data })
+  logger.info(`Freteclick tag for #${storeId} ${order._id}`, { data })
 
   return client({
     url: `/purchasing/orders/${orderId}/choose-quote`,
