@@ -77,7 +77,7 @@ module.exports = async (order, storeId, appData, appSdk) => {
       "contact": fcCompany.peopleId
     },
     "delivery": {
-      "id": fcOrderId,
+      "id": fcCustomerId,
       "address": {
         "id": null,
         "country": address.country || "Brasil",
@@ -89,7 +89,7 @@ module.exports = async (order, storeId, appData, appSdk) => {
         "number": String(address.number || 0),
         "postal_code": String(address.zip.replace(/\D/g, ''))
       },
-      "contact": fcOrderId
+      "contact": fcCustomerId
     }
   }
   logger.info(`Freteclick tag for #${storeId} ${order._id}`, { data })
