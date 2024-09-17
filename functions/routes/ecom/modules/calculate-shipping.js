@@ -219,7 +219,7 @@ exports.post = async ({ appSdk }, req, res) => {
       method: 'post',
       token,
       data: body,
-      timeout: (params.is_checkout_confirmation ? 8000 : 4000)
+      timeout: (params.is_checkout_confirmation ? 8000 : 5000)
     }).then(({ data, status }) => {
       let result
       if (typeof data === 'string') {
