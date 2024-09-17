@@ -1,4 +1,4 @@
-// read configured E-Com Plus app data
+const { logger } = require('firebase-functions')
 const getAppData = require('./../../lib/store-api/get-app-data')
 const createTag = require('../../lib/freteclick/create-tag')
 
@@ -16,88 +16,55 @@ exports.post = ({ appSdk }, req, res) => {
    * Ref.: https://developers.e-com.plus/docs/api/#/store/triggers/
    */
   const trigger = req.body
-  console.log('send webhook')
-  // get app configured options
-  let auth
-  appSdk.getAuth(storeId).then(_auth => {
-    auth = _auth
-    return getAppData({ appSdk, storeId, auth })
 
-    .then(appData => {
-      if (
-        Array.isArray(appData.ignore_triggers) &&
-        appData.ignore_triggers.indexOf(trigger.resource) > -1
-      ) {
-        // ignore current trigger
-        const err = new Error()
-        err.name = SKIP_TRIGGER_NAME
-        throw err
-      }
-      console.log('preparing to send order', )
-      /* DO YOUR CUSTOM STUFF HERE */
-      const { api_key, send_tag_status } = appData
-      console.log('preparing to send order', api_key, send_tag_status, trigger.resource === 'orders')
-      if (send_tag_status && api_key && trigger.resource === 'orders') {
-        // handle order financial status changes
-        const order = trigger.body
-        if (
-          order &&
-          order.financial_status &&
-          (order.financial_status.current === 'paid')
-        ) {
-          // read full order body
-          const resourceId = trigger.resource_id
-          console.log('Trigger disparado para enviar tag com id:', resourceId)
-          return appSdk.apiRequest(storeId, `/orders/${resourceId}.json`, 'GET', null, auth)
-            .then(({ response }) => {
-              const order = response.data
-              if (order && order.shipping_lines[0] && order.shipping_lines[0].flags && order.shipping_lines[0].flags.length && order.shipping_lines[0].flags.indexOf('freteclick-ws') === -1) {
-                return res.send(ECHO_SKIP)
-              }
-              console.log(`Shipping tag for #${storeId} ${order._id}`)
-              return createTag(order, storeId, appData, appSdk)
-                .then(data => {
-                  console.log(`>> Etiqueta Criada Com Sucesso #${storeId} ${resourceId}`, data)
-                  // updates metafields with the generated tag id
-                  return appSdk.apiRequest(
-                    storeId,
-                    `/orders/${resourceId}/metafields.json`,
-                    'POST',
-                    {
-                      namespace: 'app-freteclick',
-                      field: 'rastreio',
-                      value: data.id
-                    },
-                    auth
-                  )
-                  .then(() => data)
-                  .catch(err => {
-                    console.log('Erro hidden data')
-                    if (err.response) {
-                      console.log(err.response)
-                      const { status, data } = err.response
-                      if (status !== 401 && status !== 403) {
-                        if (typeof data === 'object' && data) {
-                          console.log(JSON.stringify(data))
-                        } else {
-                          console.log(data)
-                        }
-                      }
-                    } else {
-                      console.error(err)
-                    }
-                  })
-                })
+  appSdk.getAuth(storeId).then(async auth => {
+    const appData = await getAppData({ appSdk, storeId, auth })
+    if (
+      trigger.resource !== 'orders' ||
+      appData.ignore_triggers?.indexOf?.(trigger.resource) > -1
+    ) {
+      // ignore current trigger
+      const err = new Error()
+      err.name = SKIP_TRIGGER_NAME
+      throw err
+    }
+    if (appData.send_tag_status && appData.api_key) {
+      // handle order financial status changes
+      if (trigger.body?.financial_status?.current === 'paid') {
+        const orderId = trigger.resource_id
+        const { response } = await appSdk.apiRequest(
+          storeId,
+          `/orders/${orderId}.json`,
+          'GET',
+          null,
+          auth
+        )
+        const order = response.data
+        const shippingLine = order.shipping_lines?.[0]
+        if (shippingLine?.flags?.includes('freteclick-ws')) {
+          const trackingCodes = shippingLine.tracking_codes || []
+          if (!trackingCodes.some(({ tag }) => tag === 'freteclick')) {
+            logger.info(`Start creating tag for #${storeId} ${orderId}`)
+            const data = await createTag(order, storeId, appData, appSdk)
+            logger.info(`Tag created for #${storeId} ${orderId}`, { data })
+            trackingCodes.push({
+              code: data.id,
+              link: 'https://www.freteclick.com.br/rastreamento',
+              tag: 'freteclick'
             })
+            await appSdk.apiRequest(
+              storeId,
+              `/orders/${orderId}/shipping_lines/${shippingLine._id}.json`,
+              'PATCH',
+              { tracking_codes: trackingCodes },
+              auth
+            )
+          }
         }
       }
-    })
-    .then(() => {
-      // all done
-      res.send(ECHO_SUCCESS)
-    })
+    }
+    res.send(ECHO_SUCCESS)
   })
-
 
     .catch(err => {
       if (err.name === SKIP_TRIGGER_NAME) {
