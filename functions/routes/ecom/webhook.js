@@ -47,18 +47,21 @@ exports.post = ({ appSdk }, req, res) => {
             logger.info(`Start creating tag for #${storeId} ${orderId}`)
             const data = await createTag(order, storeId, appData, appSdk)
             logger.info(`Tag created for #${storeId} ${orderId}`, { data })
-            trackingCodes.push({
-              code: String(data['@id'] || data.id),
-              link: 'https://www.freteclick.com.br/rastreamento',
-              tag: 'freteclick'
-            })
-            await appSdk.apiRequest(
-              storeId,
-              `/orders/${orderId}/shipping_lines/${shippingLine._id}.json`,
-              'PATCH',
-              { tracking_codes: trackingCodes },
-              auth
-            )
+            const trackingId = data['@id'] || data.id
+            if (trackingId) {
+              trackingCodes.push({
+                code: String(trackingId),
+                link: 'https://www.freteclick.com.br/rastreamento',
+                tag: 'freteclick'
+              })
+              await appSdk.apiRequest(
+                storeId,
+                `/orders/${orderId}/shipping_lines/${shippingLine._id}.json`,
+                'PATCH',
+                { tracking_codes: trackingCodes },
+                auth
+              )
+            }
           }
         }
       }
