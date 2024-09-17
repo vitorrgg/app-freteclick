@@ -48,7 +48,7 @@ exports.post = ({ appSdk }, req, res) => {
             const data = await createTag(order, storeId, appData, appSdk)
             logger.info(`Tag created for #${storeId} ${orderId}`, { data })
             trackingCodes.push({
-              code: data.id,
+              code: data['@id'] || data.id,
               link: 'https://www.freteclick.com.br/rastreamento',
               tag: 'freteclick'
             })
