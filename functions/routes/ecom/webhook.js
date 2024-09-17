@@ -48,7 +48,7 @@ exports.post = ({ appSdk }, req, res) => {
             const data = await createTag(order, storeId, appData, appSdk)
             logger.info(`Tag created for #${storeId} ${orderId}`, { data })
             trackingCodes.push({
-              code: data['@id'] || data.id,
+              code: String(data['@id'] || data.id),
               link: 'https://www.freteclick.com.br/rastreamento',
               tag: 'freteclick'
             })
@@ -78,7 +78,7 @@ exports.post = ({ appSdk }, req, res) => {
         res.status(412).send(msg)
       } else {
         if (err.response) {
-          logger.warn(`Failed fetching ${err.config?.url}`, {
+          logger.warn(`Failed ${err.config?.method} ${err.config?.url}`, {
             request: err.config,
             response: err.response.data,
             status: err.response.status
