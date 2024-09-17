@@ -77,7 +77,7 @@ module.exports = async (order, storeId, appData, appSdk) => {
       "contact": fcCompany.peopleId
     },
     "delivery": {
-      fcOrderId,
+      "id": fcOrderId,
       "address": {
         "id": null,
         "country": address.country || "Brasil",
