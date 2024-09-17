@@ -74,10 +74,16 @@ exports.post = ({ appSdk }, req, res) => {
         const msg = `Webhook for ${storeId} unhandled with no authentication found`
         const error = new Error(msg)
         error.trigger = JSON.stringify(trigger)
-        console.error(error)
+        logger.error(error)
         res.status(412).send(msg)
       } else {
-        // console.error(err)
+        if (err.response) {
+          logger.warn(`Failed fetching ${err.config?.url}`, {
+            request: err.config,
+            response: err.response.data,
+            status: err.response.status
+          })
+        }
         // request to Store API with error response
         // return error status code
         res.status(500)
