@@ -180,7 +180,7 @@ const app = {
       schema: {
         type: 'object',
         title: 'Endereço do remetente',
-        description: 'Configure endereço de remetente para cálculo.',
+        description: 'Configure endereço de remetente para cálculo',
         properties: {
           street: {
             type: 'string',
@@ -245,7 +245,6 @@ const app = {
             maxLength: 100,
             title: 'País de Origem'
           },
-
         }
       },
       hide: true
@@ -473,7 +472,7 @@ const app = {
         items: {
           title: 'Centro de distribuição',
           type: 'object',
-          required: ['code', 'zip'],
+          required: ['code', 'zip', 'number'],
           additionalProperties: false,
           properties: {
             code: {
@@ -488,12 +487,92 @@ const app = {
               title: 'Api Key',
               description: 'Api Key da Frete Click específica para o CD, se houver'
             },
+            zip_range: {
+              title: 'Faixa de CEP atendida',
+              type: 'object',
+              required: [
+                'min',
+                'max'
+              ],
+              properties: {
+                min: {
+                  type: 'integer',
+                  minimum: 10000,
+                  maximum: 999999999,
+                  title: 'CEP inicial'
+                },
+                max: {
+                  type: 'integer',
+                  minimum: 10000,
+                  maximum: 999999999,
+                  title: 'CEP final'
+                }
+              }
+            },
             zip: {
               type: 'string',
               maxLength: 9,
               pattern: '^[0-9]{5}-?[0-9]{3}$',
               title: 'CEP de origem',
               description: 'Código postal do remetente para cálculo do frete'
+            },
+            street: {
+              type: 'string',
+              maxLength: 100,
+              title: 'Rua'
+            },
+            borough: {
+              type: 'string',
+              maxLength: 100,
+              title: 'Bairro'
+            },
+            number: {
+              type: 'number',
+              maxLength: 100,
+              title: 'Número'
+            },
+            complement: {
+              type: 'number',
+              maxLength: 100,
+              title: 'Complemento'
+            },
+            city: {
+              type: 'string',
+              maxLength: 100,
+              title: 'Cidade de Origem'
+            },
+            province_code: {
+              type: 'string',
+              title: 'Sigla do Estado de Origem',
+              enum: [
+                'AC',
+                'AL',
+                'AP',
+                'AM',
+                'BA',
+                'CE',
+                'DF',
+                'ES',
+                'GO',
+                'MA',
+                'MT',
+                'MS',
+                'MG',
+                'PA',
+                'PB',
+                'PR',
+                'PE',
+                'PI',
+                'RR',
+                'RO',
+                'RJ',
+                'RS',
+                'RN',
+                'SC',
+                'SP',
+                'SE',
+                'TO'
+              ]
             },
             posting_deadline: {
               title: 'Prazo de envio do CD',
@@ -517,28 +596,6 @@ const app = {
                   type: 'boolean',
                   default: true,
                   title: 'Após aprovação do pagamento'
-                }
-              }
-            },
-            zip_range: {
-              title: 'Faixa de CEP atendida',
-              type: 'object',
-              required: [
-                'min',
-                'max'
-              ],
-              properties: {
-                min: {
-                  type: 'integer',
-                  minimum: 10000,
-                  maximum: 999999999,
-                  title: 'CEP inicial'
-                },
-                max: {
-                  type: 'integer',
-                  minimum: 10000,
-                  maximum: 999999999,
-                  title: 'CEP final'
                 }
               }
             }

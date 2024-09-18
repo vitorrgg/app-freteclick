@@ -250,7 +250,6 @@ exports.post = async ({ appSdk }, req, res) => {
           const shippingLine = {
             from: {
               ...params.from,
-              ...appData.from,
               zip: originZip
             },
             to: params.to,

@@ -18,21 +18,24 @@ module.exports = async (order, storeId, appData, appSdk) => {
   let token = appData.api_key
   const shippingLine = order.shipping_lines[0]
   const warehouseCode = shippingLine.warehouse_code
+  const from = {
+    ...appData.from,
+    zip: appData.zip,
+    ...(order.shipping_lines?.[0]?.from)
+  }
   if (warehouseCode) {
     const warehouse = appData.warehouses?.find(({ code }) => code === warehouseCode)
-    if (warehouse.api_key) {
-      token = warehouse.api_key
+    if (warehouse) {
+      if (warehouse.api_key) {
+        token = warehouse.api_key
+      }
+      Object.assign(from, warehouse)
     }
   }
   const fcCompany = await getCompany(token)
   logger.info(`Freteclick ids for #${storeId}`, { fcCompany })
   const customer = order.buyers?.[0]
   const address = order.shipping_lines?.[0]?.to
-  const retrieve = {
-    ...appData.from,
-    zip: appData.zip,
-    ...(order.shipping_lines?.[0]?.from)
-  }
   const freteClickCustom = (order, field) => {
     const shippingCustom = order.shipping_lines?.[0]?.custom_fields
     const customField = shippingCustom?.find(custom => custom.field === field)
@@ -65,14 +68,14 @@ module.exports = async (order, storeId, appData, appSdk) => {
       "id": fcCompany.companyId,
       "address": {
         "id": null,
-        "country": retrieve.country || "Brasil",
-        "state": retrieve.province_code,
-        "city": retrieve.city,
-        "district": retrieve.borough,
-        "complement": retrieve.complement || "",
-        "street": retrieve.street,
-        "number": String(retrieve.number || 0),
-        "postal_code": String(retrieve.zip.replace(/\D/g, ''))
+        "country": from.country || "Brasil",
+        "state": from.province_code,
+        "city": from.city,
+        "district": from.borough,
+        "complement": from.complement || "",
+        "street": from.street,
+        "number": String(from.number || 0),
+        "postal_code": String(from.zip.replace(/\D/g, ''))
       },
       "contact": fcCompany.peopleId
     },
