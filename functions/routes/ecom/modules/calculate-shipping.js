@@ -48,7 +48,7 @@ exports.post = async ({ appSdk }, req, res) => {
   }
 
   const marketplace = true
-  const noCache = !appData.best_quotation
+  const noCache = true
 
   if (appData.free_shipping_from_value >= 0) {
     response.free_shipping_from_value = appData.free_shipping_from_value
